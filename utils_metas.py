@@ -1,6 +1,9 @@
 import os
 import pandas as pd
 
+# ==================================================
+# CONFIGURAÇÃO
+# ==================================================
 DATA_DIR = "data"
 
 MESES = [
@@ -9,9 +12,12 @@ MESES = [
 ]
 
 # ==================================================
-# EXERCÍCIOS DISPONÍVEIS
+# LISTAR EXERCÍCIOS DISPONÍVEIS
 # ==================================================
 def exercicios_metas():
+    if not os.path.exists(DATA_DIR):
+        return []
+
     arquivos = os.listdir(DATA_DIR)
     anos = [
         arq.split(".")[0]
@@ -20,19 +26,23 @@ def exercicios_metas():
     ]
     return sorted(anos)
 
-# ==================================================
-# CONVERSÃO MONETÁRIA
-# ==================================================
-def moeda_para_float(serie):
-    return (
-        serie.astype(str)
-        .str.replace(".", "", regex=False)
-        .str.replace(",", ".", regex=False)
-        .astype(float)
-    )
 
 # ==================================================
-# CARREGAR METAS — 1 EXERCÍCIO
+# CONVERSÃO MONETÁRIA SEGURA (STRING → FLOAT)
+# ==================================================
+def moeda_para_float(valor):
+    if valor is None or pd.isna(valor):
+        return 0.0
+
+    return float(
+        str(valor)
+        .replace(".", "")
+        .replace(",", ".")
+    )
+
+
+# ==================================================
+# CARREGAR METAS – ARRECADAÇÃO (1 EXERCÍCIO)
 # ==================================================
 def carregar_metas_arrecadacao(exercicio):
     caminho = os.path.join(DATA_DIR, f"{exercicio}.metasgerais.csv")
@@ -41,12 +51,13 @@ def carregar_metas_arrecadacao(exercicio):
         raise FileNotFoundError(f"Arquivo não encontrado: {caminho}")
 
     df = pd.read_csv(caminho, sep=";", dtype=str)
-    df["Exercício"] = exercicio
+    df["Exercício"] = str(exercicio)
 
     return df
 
+
 # ==================================================
-# NORMALIZAR POR COMPETÊNCIA (MENSAL)
+# NORMALIZAR METAS – ARRECADAÇÃO (MENSAL)
 # ==================================================
 def normalizar_metas(df):
     registros = []
@@ -56,22 +67,28 @@ def normalizar_metas(df):
             col_prev = f"Previsto {mes}"
             col_real = f"Realizado {mes}"
 
-            if col_prev in df.columns or col_real in df.columns:
-                previsto = row[col_prev] if col_prev in df.columns else "0"
-                realizado = row[col_real] if col_real in df.columns else "0"
+            previsto = row[col_prev] if col_prev in df.columns else "0"
+            realizado = row[col_real] if col_real in df.columns else "0"
 
-                registros.append({
-                    "Exercício": row["Exercício"],
-                    "Especificação": row.get("Especificação", "Não informado"),
-                    "Competência": mes,
-                    "Previsto": moeda_para_float(pd.Series([previsto]))[0],
-                    "Realizado": moeda_para_float(pd.Series([realizado]))[0],
-                })
+            registros.append({
+                "Exercício": row["Exercício"],
+                "Especificação": row.get("Especificação", "Não informado"),
+                "Competência": mes,
+                "Previsto": moeda_para_float(previsto),
+                "Realizado": moeda_para_float(realizado),
+            })
 
-    return pd.DataFrame(registros)
+    df_final = pd.DataFrame(registros)
+
+    # 🔒 BLINDAGEM FINAL DE TIPO (CRÍTICO PARA O CLOUD)
+    df_final["Previsto"] = pd.to_numeric(df_final["Previsto"], errors="coerce").fillna(0)
+    df_final["Realizado"] = pd.to_numeric(df_final["Realizado"], errors="coerce").fillna(0)
+
+    return df_final
+
 
 # ==================================================
-# CARREGAR MÚLTIPLOS EXERCÍCIOS (JÁ NORMALIZADO)
+# CARREGAR METAS – ARRECADAÇÃO (MÚLTIPLOS EXERCÍCIOS)
 # ==================================================
 def carregar_metas_multiplos_exercicios(anos):
     dfs = []
@@ -81,10 +98,14 @@ def carregar_metas_multiplos_exercicios(anos):
         df_norm = normalizar_metas(df_raw)
         dfs.append(df_norm)
 
+    if not dfs:
+        return pd.DataFrame()
+
     return pd.concat(dfs, ignore_index=True)
 
+
 # ==================================================
-# CARREGAR METAS POR RECURSO — 1 EXERCÍCIO
+# CARREGAR METAS POR RECURSO (1 EXERCÍCIO)
 # ==================================================
 def carregar_metas_recurso(exercicio):
     caminho = os.path.join(DATA_DIR, f"{exercicio}.metasporfonte.csv")
@@ -93,7 +114,7 @@ def carregar_metas_recurso(exercicio):
         raise FileNotFoundError(f"Arquivo não encontrado: {caminho}")
 
     df = pd.read_csv(caminho, sep=";", dtype=str)
-    df["Exercício"] = exercicio
+    df["Exercício"] = str(exercicio)
 
     return df
 
@@ -109,23 +130,28 @@ def normalizar_metas_recurso(df):
             col_prev = f"Previsto {mes}"
             col_real = f"Realizado {mes}"
 
-            if col_prev in df.columns or col_real in df.columns:
-                previsto = row[col_prev] if col_prev in df.columns else "0"
-                realizado = row[col_real] if col_real in df.columns else "0"
+            previsto = row[col_prev] if col_prev in df.columns else "0"
+            realizado = row[col_real] if col_real in df.columns else "0"
 
-                registros.append({
-                    "Exercício": row["Exercício"],
-                    "Recurso": row.get("Código", "Não informado"),
-                    "Competência": mes,
-                    "Previsto": moeda_para_float(pd.Series([previsto]))[0],
-                    "Realizado": moeda_para_float(pd.Series([realizado]))[0],
-                })
+            registros.append({
+                "Exercício": row["Exercício"],
+                "Recurso": row.get("Código", "Não informado"),
+                "Competência": mes,
+                "Previsto": moeda_para_float(previsto),
+                "Realizado": moeda_para_float(realizado),
+            })
 
-    return pd.DataFrame(registros)
+    df_final = pd.DataFrame(registros)
+
+    # 🔒 BLINDAGEM FINAL
+    df_final["Previsto"] = pd.to_numeric(df_final["Previsto"], errors="coerce").fillna(0)
+    df_final["Realizado"] = pd.to_numeric(df_final["Realizado"], errors="coerce").fillna(0)
+
+    return df_final
 
 
 # ==================================================
-# CARREGAR MÚLTIPLOS EXERCÍCIOS — RECURSO
+# CARREGAR METAS POR RECURSO (MÚLTIPLOS EXERCÍCIOS)
 # ==================================================
 def carregar_metas_recurso_multiplos_exercicios(anos):
     dfs = []
@@ -134,5 +160,8 @@ def carregar_metas_recurso_multiplos_exercicios(anos):
         df_raw = carregar_metas_recurso(ano)
         df_norm = normalizar_metas_recurso(df_raw)
         dfs.append(df_norm)
+
+    if not dfs:
+        return pd.DataFrame()
 
     return pd.concat(dfs, ignore_index=True)
