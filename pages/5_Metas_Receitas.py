@@ -147,20 +147,25 @@ elif not tipo_valor:
     st.warning("Selecione ao menos um tipo de valor.")
 else:
     df_long = df_base.melt(
-    id_vars=["Exercício", "Competência"],
-    value_vars=["Previsto", "Realizado"],
-    var_name="Tipo",
-    value_name="Valor"
-)
+        id_vars=["Exercício", "Competência"],
+        value_vars=["Previsto", "Realizado"],
+        var_name="Tipo",
+        value_name="Valor"
+    )
 
-# 🔑 CORREÇÃO CRÍTICA (EVITA CONTAGEM)
-df_long["Valor"] = pd.to_numeric(df_long["Valor"], errors="coerce").fillna(0)
+    # 🔑 CORREÇÃO CRÍTICA (EVITA CONTAGEM)
+    df_long["Valor"] = pd.to_numeric(
+        df_long["Valor"], errors="coerce"
+    ).fillna(0)
 
-df_long = df_long[
-    (df_long["Tipo"].isin(tipo_valor)) &
-    (df_long["Valor"] > 0)
-]
-    df_long["Serie"] = df_long["Tipo"] + " " + df_long["Exercício"].astype(str)
+    df_long = df_long[
+        (df_long["Tipo"].isin(tipo_valor)) &
+        (df_long["Valor"] > 0)
+    ]
+
+    df_long["Serie"] = (
+        df_long["Tipo"] + " " + df_long["Exercício"].astype(str)
+    )
 
     fig = px.bar(
         df_long,
@@ -193,6 +198,7 @@ df_long = df_long[
     )
 
     st.plotly_chart(fig, use_container_width=True)
+
 
 # =====================================================
 # TABELA
@@ -242,5 +248,6 @@ st.download_button(
 )
 
 st.caption("Metas de Receita • Filtro inteligente por receita e exercício")
+
 
 
