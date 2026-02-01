@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import unicodedata
 
 from utils_metas import (
     exercicios_metas,
@@ -30,41 +31,75 @@ st.set_page_config(
 st.title("📊 Metas de Receita")
 
 # =====================================================
-# FUNÇÃO DE FORMATAÇÃO MONETÁRIA
+# FUNÇÕES AUXILIARES
 # =====================================================
 def fmt_moeda(valor):
     if pd.isna(valor):
         return ""
     return f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
+def normalizar_texto(txt):
+    if pd.isna(txt):
+        return ""
+    return (
+        unicodedata
+        .normalize("NFKD", str(txt))
+        .encode("ASCII", "ignore")
+        .decode("utf-8")
+        .lower()
+        .strip()
+    )
+
 # =====================================================
-# FILTROS GERAIS
+# CARGA INICIAL (TODOS OS DADOS)
+# =====================================================
+exercicios = exercicios_metas()
+df_full = carregar_metas_multiplos_exercicios(exercicios)
+
+# coluna auxiliar para busca sem acento
+df_full["Especificacao_norm"] = df_full["Especificação"].apply(normalizar_texto)
+
+# =====================================================
+# FILTROS
 # =====================================================
 st.subheader("🎯 Filtros")
 
 col1, col2, col3 = st.columns(3)
 
-# ---- Exercício
-exercicios = exercicios_metas()
-sel_exercicios = col1.multiselect(
+# ---- Receita (PRIMEIRO)
+receitas_norm = (
+    df_full[["Especificação", "Especificacao_norm"]]
+    .drop_duplicates()
+    .sort_values("Especificação")
+)
+
+mapa_receitas = dict(
+    zip(receitas_norm["Especificação"], receitas_norm["Especificacao_norm"])
+)
+
+receita_sel = col1.selectbox(
+    "Receita",
+    ["Todas"] + list(mapa_receitas.keys())
+)
+
+# ---- Aplica filtro de Receita
+df = df_full.copy()
+
+if receita_sel != "Todas":
+    chave = mapa_receitas[receita_sel]
+    df = df[df["Especificacao_norm"] == chave]
+
+# ---- Exercício (DEPOIS da Receita)
+anos_disponiveis = sorted(df["Exercício"].unique())
+
+sel_exercicios = col2.multiselect(
     "Exercício",
-    ["Todos"] + exercicios,
+    ["Todos"] + anos_disponiveis,
     default=["Todos"]
 )
 
-anos = exercicios if "Todos" in sel_exercicios else sel_exercicios
-
-# =====================================================
-# CARGA DOS DADOS
-# =====================================================
-df = carregar_metas_multiplos_exercicios(anos)
-
-# ---- Receita
-receitas = ["Todas"] + sorted(df["Especificação"].dropna().unique())
-receita_sel = col2.selectbox("Receita", receitas)
-
-if receita_sel != "Todas":
-    df = df[df["Especificação"] == receita_sel]
+if "Todos" not in sel_exercicios:
+    df = df[df["Exercício"].isin(sel_exercicios)]
 
 # ---- Competência
 ordem_meses = [
@@ -83,7 +118,19 @@ if "Todas" not in comp_sel:
     df = df[df["Competência"].isin(comp_sel)]
 
 # =====================================================
-# FILTROS DO GRÁFICO
+# CONSOLIDAÇÃO FINAL
+# =====================================================
+df_base = (
+    df
+    .groupby(
+        ["Exercício", "Especificação", "Competência"],
+        as_index=False
+    )[["Previsto", "Realizado"]]
+    .sum()
+)
+
+# =====================================================
+# GRÁFICO
 # =====================================================
 st.markdown("---")
 st.subheader("📈 Gráfico Comparativo")
@@ -94,15 +141,12 @@ tipo_valor = st.multiselect(
     default=["Previsto", "Realizado"]
 )
 
-# =====================================================
-# GRÁFICO
-# =====================================================
 if receita_sel == "Todas":
     st.info("Selecione uma receita específica para visualizar o gráfico.")
 elif not tipo_valor:
-    st.warning("Selecione ao menos um tipo de valor para o gráfico.")
+    st.warning("Selecione ao menos um tipo de valor.")
 else:
-    df_long = df.melt(
+    df_long = df_base.melt(
         id_vars=["Exercício", "Competência"],
         value_vars=["Previsto", "Realizado"],
         var_name="Tipo",
@@ -114,13 +158,7 @@ else:
         (df_long["Valor"] > 0)
     ]
 
-    # 🔑 chave visual
-    df_long["Serie"] = (
-        df_long["Tipo"] + " " + df_long["Exercício"].astype(str)
-    )
-
-    # 🔑 valor formatado para leitura (tooltip)
-    df_long["Valor_fmt"] = df_long["Valor"].apply(fmt_moeda)
+    df_long["Serie"] = df_long["Tipo"] + " " + df_long["Exercício"].astype(str)
 
     fig = px.bar(
         df_long,
@@ -129,37 +167,25 @@ else:
         color="Serie",
         barmode="group",
         category_orders={"Competência": ordem_meses},
+        title=f"Comparativo Mensal – {receita_sel}",
         labels={
             "Valor": "Valor (R$)",
             "Competência": "Mês",
             "Serie": ""
-        },
-        title=f"Comparativo Mensal – {receita_sel}"
+        }
     )
 
-    # ✅ TOOLTIP CORRETO
-    fig.update_traces(
-        hovertemplate=
-        "<b>%{x}</b><br>" +
-        "%{fullData.name}<br>" +
-        "Valor: %{customdata}<extra></extra>",
-        customdata=df_long["Valor_fmt"],
-        width=0.32
-    )
+    fig.update_traces(width=0.32)
 
     fig.update_layout(
-        bargap=0.15,
-        bargroupgap=0.05,
         height=600,
         yaxis_tickprefix="R$ ",
         yaxis_tickformat=",.0f",
-        legend_title_text="",
         legend=dict(
             orientation="h",
-            yanchor="top",
             y=-0.25,
-            xanchor="center",
-            x=0.5
+            x=0.5,
+            xanchor="center"
         ),
         margin=dict(b=90)
     )
@@ -182,11 +208,7 @@ tabela = (
     )
 )
 
-tabela.columns = [
-    f"{tipo} {mes}"
-    for tipo, mes in tabela.columns
-]
-
+tabela.columns = [f"{t} {m}" for t, m in tabela.columns]
 tabela = tabela.reset_index()
 
 colunas_ordenadas = ["Exercício", "Especificação"]
@@ -217,4 +239,4 @@ st.download_button(
     mime="text/csv"
 )
 
-st.caption("Metas de Receita • Gráfico comparativo por tipo e exercício")
+st.caption("Metas de Receita • Filtro inteligente por receita e exercício")
