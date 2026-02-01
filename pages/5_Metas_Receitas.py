@@ -58,9 +58,6 @@ anos = exercicios if "Todos" in sel_exercicios else sel_exercicios
 # CARGA DOS DADOS
 # =====================================================
 df = carregar_metas_multiplos_exercicios(anos)
-st.subheader("🧪 Debug – Tipos das colunas")
-st.write(df[["Previsto", "Realizado"]].dtypes)
-
 
 # ---- Receita
 receitas = ["Todas"] + sorted(df["Especificação"].dropna().unique())
@@ -214,3 +211,4 @@ st.download_button(
 
 
 st.caption("Metas de Receita • Gráfico comparativo por tipo e exercício")
+
