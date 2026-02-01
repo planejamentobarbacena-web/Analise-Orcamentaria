@@ -27,10 +27,10 @@ st.set_page_config(
     layout="wide"
 )
 
-st.header("📊 Metas de Receita")
+st.title("📊 Metas de Receita")
 
 # =====================================================
-# FUNÇÃO DE FORMATAÇÃO
+# FUNÇÃO DE FORMATAÇÃO MONETÁRIA
 # =====================================================
 def fmt_moeda(valor):
     if pd.isna(valor):
@@ -38,12 +38,13 @@ def fmt_moeda(valor):
     return f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
 # =====================================================
-# FILTROS
+# FILTROS GERAIS
 # =====================================================
 st.subheader("🎯 Filtros")
 
 col1, col2, col3 = st.columns(3)
 
+# ---- Exercício
 exercicios = exercicios_metas()
 sel_exercicios = col1.multiselect(
     "Exercício",
@@ -58,20 +59,19 @@ anos = exercicios if "Todos" in sel_exercicios else sel_exercicios
 # =====================================================
 df = carregar_metas_multiplos_exercicios(anos)
 
-# Receita
+# ---- Receita
 receitas = ["Todas"] + sorted(df["Especificação"].dropna().unique())
 receita_sel = col2.selectbox("Receita", receitas)
 
 if receita_sel != "Todas":
     df = df[df["Especificação"] == receita_sel]
 
-# Ordem correta dos meses
+# ---- Competência
 ordem_meses = [
     "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
     "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
 ]
 
-# Competência
 competencias = ["Todas"] + ordem_meses
 comp_sel = col3.multiselect(
     "Competência",
@@ -82,15 +82,8 @@ comp_sel = col3.multiselect(
 if "Todas" not in comp_sel:
     df = df[df["Competência"].isin(comp_sel)]
 
-# 🔑 GARANTIA ABSOLUTA DE ORDEM
-df["Competência"] = pd.Categorical(
-    df["Competência"],
-    categories=ordem_meses,
-    ordered=True
-)
-
 # =====================================================
-# GRÁFICO
+# FILTROS DO GRÁFICO
 # =====================================================
 st.markdown("---")
 st.subheader("📈 Gráfico Comparativo")
@@ -101,12 +94,17 @@ tipo_valor = st.multiselect(
     default=["Previsto", "Realizado"]
 )
 
+# =====================================================
+# GRÁFICO
+# =====================================================
+# =====================================================
+# GRÁFICO
+# =====================================================
 if receita_sel == "Todas":
     st.info("Selecione uma receita específica para visualizar o gráfico.")
 elif not tipo_valor:
-    st.warning("Selecione ao menos um tipo de valor.")
+    st.warning("Selecione ao menos um tipo de valor para o gráfico.")
 else:
-    # TRANSFORMA EM LONGO
     df_long = df.melt(
         id_vars=["Exercício", "Competência"],
         value_vars=["Previsto", "Realizado"],
@@ -114,37 +112,54 @@ else:
         value_name="Valor"
     )
 
-    df_long = df_long[df_long["Tipo"].isin(tipo_valor)]
+    df_long = df_long[
+        (df_long["Tipo"].isin(tipo_valor)) &
+        (df_long["Valor"] > 0)
+    ]
 
-    # ❗ NADA DE AGREGAÇÃO
+    # 🔑 chave visual: Tipo + Exercício
+    df_long["Serie"] = df_long["Tipo"] + " " + df_long["Exercício"].astype(str)
+
     fig = px.bar(
         df_long,
         x="Competência",
         y="Valor",
-        color="Tipo",
+        color="Serie",                 # 👈 NÃO AGREGA MAIS
         barmode="group",
-        facet_col="Exercício",  # 👈 separa os anos corretamente
-        category_orders={"Competência": ordem_meses},
+        category_orders={
+            "Competência": ordem_meses
+        },
         labels={
             "Valor": "Valor (R$)",
             "Competência": "Mês",
-            "Tipo": ""
+            "Serie": ""
         },
         title=f"Comparativo Mensal – {receita_sel}"
     )
 
+    fig.update_traces(width=0.32)
+
     fig.update_layout(
-        height=600,
-        yaxis_tickprefix="R$ ",
-        yaxis_tickformat=",.0f",
-        legend_title_text="",
-        margin=dict(t=80)
-    )
+    bargap=0.15,
+    bargroupgap=0.05,
+    height=600,
+    yaxis_tickprefix="R$ ",
+    yaxis_tickformat=",.0f",
+    legend_title_text="",
+    legend=dict(
+        orientation="h",      # 👈 legenda horizontal
+        yanchor="top",
+        y=-0.25,              # 👈 joga pra baixo do gráfico
+        xanchor="center",
+        x=0.5
+    ),
+    margin=dict(b=90)         # 👈 espaço extra para a legenda
+)
 
     st.plotly_chart(fig, use_container_width=True)
 
 # =====================================================
-# TABELA
+# TABELA (SEM DEPENDER DO GRÁFICO)
 # =====================================================
 st.markdown("---")
 st.subheader("📋 Metas de Receita – Visão Tabular")
@@ -159,8 +174,21 @@ tabela = (
     )
 )
 
-tabela.columns = [f"{tipo} {mes}" for tipo, mes in tabela.columns]
+tabela.columns = [
+    f"{tipo} {mes}"
+    for tipo, mes in tabela.columns
+]
+
 tabela = tabela.reset_index()
+
+colunas_ordenadas = ["Exercício", "Especificação"]
+for mes in ordem_meses:
+    for tipo in ["Previsto", "Realizado"]:
+        col = f"{tipo} {mes}"
+        if col in tabela.columns:
+            colunas_ordenadas.append(col)
+
+tabela = tabela[colunas_ordenadas]
 
 for col in tabela.columns:
     if col not in ["Exercício", "Especificação"]:
@@ -181,4 +209,4 @@ st.download_button(
     mime="text/csv"
 )
 
-st.caption("Metas de Receita • Comparativo mensal por exercício")
+st.caption("Metas de Receita • Gráfico comparativo por tipo e exercício")
