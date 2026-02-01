@@ -82,6 +82,9 @@ def normalizar_metas(df):
 # CARREGAR MÚLTIPLOS EXERCÍCIOS — ARRECADAÇÃO
 # ==================================================
 def carregar_metas_multiplos_exercicios(anos):
+    st.subheader("🧪 Debug – Tipos das colunas")
+st.write(df[["Previsto", "Realizado"]].dtypes)
+
     dfs = []
 
     for ano in anos:
@@ -145,3 +148,4 @@ def carregar_metas_recurso_multiplos_exercicios(anos):
         return pd.DataFrame()
 
     return pd.concat(dfs, ignore_index=True)
+
