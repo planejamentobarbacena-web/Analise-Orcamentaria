@@ -31,6 +31,14 @@ st.set_page_config(
 st.title("📊 Metas de Receita")
 
 # =====================================================
+# CONSTANTES
+# =====================================================
+MESES = [
+    "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+    "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
+]
+
+# =====================================================
 # FUNÇÕES
 # =====================================================
 def fmt_moeda(v):
@@ -49,11 +57,6 @@ def normalizar(txt):
         .strip()
     )
 
-MESES = [
-    "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
-    "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
-]
-
 # =====================================================
 # DADOS
 # =====================================================
@@ -61,6 +64,13 @@ anos = exercicios_metas()
 df_full = carregar_metas_multiplos_exercicios(anos)
 
 df_full["Especificacao_norm"] = df_full["Especificação"].apply(normalizar)
+
+# força ordem dos meses
+df_full["Competência"] = pd.Categorical(
+    df_full["Competência"],
+    categories=MESES,
+    ordered=True
+)
 
 # =====================================================
 # FILTROS
@@ -100,7 +110,7 @@ ex_sel = c2.multiselect(
 if "Todos" not in ex_sel:
     df = df[df["Exercício"].isin(ex_sel)]
 
-# ---- Mês
+# ---- Competência
 mes_sel = c3.multiselect(
     "Competência",
     ["Todos"] + MESES,
@@ -111,7 +121,7 @@ if "Todos" not in mes_sel:
     df = df[df["Competência"].isin(mes_sel)]
 
 # =====================================================
-# GRÁFICO (SEM CONTAGEM ERRADA)
+# GRÁFICO (AGORA SOMA, NÃO CONTA)
 # =====================================================
 st.markdown("---")
 st.subheader("📈 Gráfico Comparativo")
@@ -133,6 +143,9 @@ else:
         var_name="Tipo",
         value_name="Valor"
     )
+
+    # 🔑 CORREÇÃO CRÍTICA
+    df_long["Valor"] = pd.to_numeric(df_long["Valor"], errors="coerce").fillna(0)
 
     df_long = df_long[df_long["Valor"] > 0]
 
@@ -167,7 +180,7 @@ else:
     st.plotly_chart(fig, use_container_width=True)
 
 # =====================================================
-# TABELA (MODELO CERTO)
+# TABELA (ORDEM CORRETA)
 # =====================================================
 st.markdown("---")
 st.subheader("📋 Metas de Receita – Visão Tabular")
@@ -180,6 +193,7 @@ tabela = (
         values=["Previsto", "Realizado"],
         aggfunc="sum"
     )
+    .reindex(MESES, axis=1, level=1)
 )
 
 tabela.columns = [f"{t} {m}" for t, m in tabela.columns]
@@ -204,4 +218,4 @@ st.download_button(
     mime="text/csv"
 )
 
-st.caption("Metas de Receita • Gráfico e tabela coerentes")
+st.caption("Metas de Receita • Valores reais e meses ordenados")
