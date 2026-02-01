@@ -33,10 +33,10 @@ st.title("📊 Metas de Receita")
 # =====================================================
 # FUNÇÕES
 # =====================================================
-def fmt_moeda(valor):
-    if pd.isna(valor) or valor == 0:
+def fmt_moeda(v):
+    if pd.isna(v) or v == 0:
         return ""
-    return f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+    return f"R$ {v:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
 def normalizar(txt):
     if pd.isna(txt):
@@ -55,10 +55,10 @@ MESES = [
 ]
 
 # =====================================================
-# CARGA DOS DADOS
+# DADOS
 # =====================================================
-exercicios = exercicios_metas()
-df_full = carregar_metas_multiplos_exercicios(exercicios)
+anos = exercicios_metas()
+df_full = carregar_metas_multiplos_exercicios(anos)
 
 df_full["Especificacao_norm"] = df_full["Especificação"].apply(normalizar)
 
@@ -69,31 +69,31 @@ st.subheader("🎯 Filtros")
 
 c1, c2, c3 = st.columns(3)
 
-# ---- Receita (primeiro)
+# ---- Receita
 receitas = (
     df_full[["Especificação", "Especificacao_norm"]]
     .drop_duplicates()
     .sort_values("Especificação")
 )
 
-mapa_receitas = dict(zip(receitas["Especificação"], receitas["Especificacao_norm"]))
+mapa = dict(zip(receitas["Especificação"], receitas["Especificacao_norm"]))
 
 receita_sel = c1.selectbox(
     "Receita",
-    ["Todas"] + list(mapa_receitas.keys())
+    ["Todas"] + list(mapa.keys())
 )
 
 df = df_full.copy()
 
 if receita_sel != "Todas":
-    df = df[df["Especificacao_norm"] == mapa_receitas[receita_sel]]
+    df = df[df["Especificacao_norm"] == mapa[receita_sel]]
 
 # ---- Exercício
-anos = sorted(df["Exercício"].unique())
+anos_disp = sorted(df["Exercício"].unique())
 
 ex_sel = c2.multiselect(
     "Exercício",
-    ["Todos"] + anos,
+    ["Todos"] + anos_disp,
     default=["Todos"]
 )
 
@@ -107,10 +107,11 @@ mes_sel = c3.multiselect(
     default=["Todos"]
 )
 
-meses_usados = MESES if "Todos" in mes_sel else mes_sel
+if "Todos" not in mes_sel:
+    df = df[df["Competência"].isin(mes_sel)]
 
 # =====================================================
-# GRÁFICO
+# GRÁFICO (SEM CONTAGEM ERRADA)
 # =====================================================
 st.markdown("---")
 st.subheader("📈 Gráfico Comparativo")
@@ -122,32 +123,25 @@ tipo_valor = st.multiselect(
 )
 
 if receita_sel == "Todas":
-    st.info("Selecione uma receita para exibir o gráfico.")
+    st.info("Selecione uma receita para visualizar o gráfico.")
 elif not tipo_valor:
     st.warning("Selecione Previsto e/ou Realizado.")
 else:
-    linhas = []
+    df_long = df.melt(
+        id_vars=["Exercício", "Competência"],
+        value_vars=tipo_valor,
+        var_name="Tipo",
+        value_name="Valor"
+    )
 
-    for _, row in df.iterrows():
-        for mes in meses_usados:
-            if "Previsto" in tipo_valor:
-                linhas.append({
-                    "Competência": mes,
-                    "Serie": f"Previsto {row['Exercício']}",
-                    "Valor": row.get(f"Previsto {mes}", 0)
-                })
-            if "Realizado" in tipo_valor:
-                linhas.append({
-                    "Competência": mes,
-                    "Serie": f"Realizado {row['Exercício']}",
-                    "Valor": row.get(f"Realizado {mes}", 0)
-                })
+    df_long = df_long[df_long["Valor"] > 0]
 
-    df_graf = pd.DataFrame(linhas)
-    df_graf = df_graf[df_graf["Valor"] > 0]
+    df_long["Serie"] = (
+        df_long["Tipo"] + " " + df_long["Exercício"].astype(str)
+    )
 
     fig = px.bar(
-        df_graf,
+        df_long,
         x="Competência",
         y="Valor",
         color="Serie",
@@ -173,7 +167,7 @@ else:
     st.plotly_chart(fig, use_container_width=True)
 
 # =====================================================
-# TABELA
+# TABELA (MODELO CERTO)
 # =====================================================
 st.markdown("---")
 st.subheader("📋 Metas de Receita – Visão Tabular")
@@ -182,11 +176,14 @@ tabela = (
     df
     .pivot_table(
         index=["Exercício", "Especificação"],
-        values=[f"Previsto {m}" for m in MESES] + [f"Realizado {m}" for m in MESES],
+        columns="Competência",
+        values=["Previsto", "Realizado"],
         aggfunc="sum"
     )
-    .reset_index()
 )
+
+tabela.columns = [f"{t} {m}" for t, m in tabela.columns]
+tabela = tabela.reset_index()
 
 for col in tabela.columns:
     if col not in ["Exercício", "Especificação"]:
@@ -207,4 +204,4 @@ st.download_button(
     mime="text/csv"
 )
 
-st.caption("Metas de Receita • Gráfico e tabela coerentes com o CSV")
+st.caption("Metas de Receita • Gráfico e tabela coerentes")
