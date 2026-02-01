@@ -182,6 +182,9 @@ else:
 # =====================================================
 # TABELA (ORDEM CORRETA)
 # =====================================================
+# =====================================================
+# TABELA (ORDEM CORRETA: Previsto + Realizado POR MÊS)
+# =====================================================
 st.markdown("---")
 st.subheader("📋 Metas de Receita – Visão Tabular")
 
@@ -193,17 +196,32 @@ tabela = (
         values=["Previsto", "Realizado"],
         aggfunc="sum"
     )
-    .reindex(MESES, axis=1, level=1)
 )
 
-tabela.columns = [f"{t} {m}" for t, m in tabela.columns]
+# garante ordem dos meses
+tabela = tabela.reindex(MESES, axis=1, level=1)
+
+# 🔑 REORGANIZA AS COLUNAS PARA:
+# Previsto Janeiro | Realizado Janeiro | Previsto Fevereiro | Realizado Fevereiro | ...
+colunas_ordenadas = []
+for mes in MESES:
+    for tipo in ["Previsto", "Realizado"]:
+        if (tipo, mes) in tabela.columns:
+            colunas_ordenadas.append((tipo, mes))
+
+tabela = tabela[colunas_ordenadas]
+
+# renomeia colunas
+tabela.columns = [f"{tipo} {mes}" for tipo, mes in tabela.columns]
 tabela = tabela.reset_index()
 
+# formatação monetária
 for col in tabela.columns:
     if col not in ["Exercício", "Especificação"]:
         tabela[col] = tabela[col].apply(fmt_moeda)
 
 st.dataframe(tabela, use_container_width=True)
+
 
 # =====================================================
 # DOWNLOAD
@@ -219,3 +237,4 @@ st.download_button(
 )
 
 st.caption("Metas de Receita • Valores reais e meses ordenados")
+
