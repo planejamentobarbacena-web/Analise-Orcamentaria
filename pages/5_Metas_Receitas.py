@@ -97,9 +97,6 @@ tipo_valor = st.multiselect(
 # =====================================================
 # GRÁFICO
 # =====================================================
-# =====================================================
-# GRÁFICO
-# =====================================================
 if receita_sel == "Todas":
     st.info("Selecione uma receita específica para visualizar o gráfico.")
 elif not tipo_valor:
@@ -112,23 +109,21 @@ else:
         value_name="Valor"
     )
 
-    df_long = df_long[
-        (df_long["Tipo"].isin(tipo_valor)) &
-        (df_long["Valor"] > 0)
-    ]
+    # ✅ FILTRO CORRETO (NÃO REMOVE ZEROS)
+    df_long = df_long[df_long["Tipo"].isin(tipo_valor)]
 
-    # 🔑 chave visual: Tipo + Exercício
-    df_long["Serie"] = df_long["Tipo"] + " " + df_long["Exercício"].astype(str)
+    # Série visual: Tipo + Exercício
+    df_long["Serie"] = (
+        df_long["Tipo"] + " " + df_long["Exercício"].astype(str)
+    )
 
     fig = px.bar(
         df_long,
         x="Competência",
         y="Valor",
-        color="Serie",                 # 👈 NÃO AGREGA MAIS
+        color="Serie",
         barmode="group",
-        category_orders={
-            "Competência": ordem_meses
-        },
+        category_orders={"Competência": ordem_meses},
         labels={
             "Valor": "Valor (R$)",
             "Competência": "Mês",
@@ -137,29 +132,29 @@ else:
         title=f"Comparativo Mensal – {receita_sel}"
     )
 
-    fig.update_traces(width=0.32)
+    fig.update_traces(width=0.35)
 
     fig.update_layout(
-    bargap=0.15,
-    bargroupgap=0.05,
-    height=600,
-    yaxis_tickprefix="R$ ",
-    yaxis_tickformat=",.0f",
-    legend_title_text="",
-    legend=dict(
-        orientation="h",      # 👈 legenda horizontal
-        yanchor="top",
-        y=-0.25,              # 👈 joga pra baixo do gráfico
-        xanchor="center",
-        x=0.5
-    ),
-    margin=dict(b=90)         # 👈 espaço extra para a legenda
-)
+        bargap=0.15,
+        bargroupgap=0.05,
+        height=600,
+        yaxis_tickprefix="R$ ",
+        yaxis_tickformat=",.0f",
+        legend_title_text="",
+        legend=dict(
+            orientation="h",
+            yanchor="top",
+            y=-0.25,
+            xanchor="center",
+            x=0.5
+        ),
+        margin=dict(b=90)
+    )
 
     st.plotly_chart(fig, use_container_width=True)
 
 # =====================================================
-# TABELA (SEM DEPENDER DO GRÁFICO)
+# TABELA
 # =====================================================
 st.markdown("---")
 st.subheader("📋 Metas de Receita – Visão Tabular")
@@ -209,6 +204,4 @@ st.download_button(
     mime="text/csv"
 )
 
-
 st.caption("Metas de Receita • Gráfico comparativo por tipo e exercício")
-
