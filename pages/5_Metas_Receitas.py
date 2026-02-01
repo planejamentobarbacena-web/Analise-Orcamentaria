@@ -160,13 +160,6 @@ df_long = df_long[
     (df_long["Tipo"].isin(tipo_valor)) &
     (df_long["Valor"] > 0)
 ]
-
-
-    df_long = df_long[
-        (df_long["Tipo"].isin(tipo_valor)) &
-        (df_long["Valor"] > 0)
-    ]
-
     df_long["Serie"] = df_long["Tipo"] + " " + df_long["Exercício"].astype(str)
 
     fig = px.bar(
@@ -249,4 +242,5 @@ st.download_button(
 )
 
 st.caption("Metas de Receita • Filtro inteligente por receita e exercício")
+
 
