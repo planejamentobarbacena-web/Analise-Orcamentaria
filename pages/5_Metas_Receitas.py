@@ -51,12 +51,19 @@ def normalizar_texto(txt):
     )
 
 # =====================================================
-# CARGA INICIAL (TODOS OS DADOS)
+# MESES
+# =====================================================
+MESES = [
+    "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+    "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
+]
+
+# =====================================================
+# CARGA INICIAL
 # =====================================================
 exercicios = exercicios_metas()
 df_full = carregar_metas_multiplos_exercicios(exercicios)
 
-# coluna auxiliar para busca sem acento
 df_full["Especificacao_norm"] = df_full["Especificação"].apply(normalizar_texto)
 
 # =====================================================
@@ -66,7 +73,6 @@ st.subheader("🎯 Filtros")
 
 col1, col2, col3 = st.columns(3)
 
-# ---- Receita (PRIMEIRO)
 receitas_norm = (
     df_full[["Especificação", "Especificacao_norm"]]
     .drop_duplicates()
@@ -82,14 +88,11 @@ receita_sel = col1.selectbox(
     ["Todas"] + list(mapa_receitas.keys())
 )
 
-# ---- Aplica filtro de Receita
 df = df_full.copy()
 
 if receita_sel != "Todas":
-    chave = mapa_receitas[receita_sel]
-    df = df[df["Especificacao_norm"] == chave]
+    df = df[df["Especificacao_norm"] == mapa_receitas[receita_sel]]
 
-# ---- Exercício (DEPOIS da Receita)
 anos_disponiveis = sorted(df["Exercício"].unique())
 
 sel_exercicios = col2.multiselect(
@@ -101,16 +104,9 @@ sel_exercicios = col2.multiselect(
 if "Todos" not in sel_exercicios:
     df = df[df["Exercício"].isin(sel_exercicios)]
 
-# ---- Competência
-ordem_meses = [
-    "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
-    "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
-]
-
-competencias = ["Todas"] + ordem_meses
 comp_sel = col3.multiselect(
     "Competência",
-    competencias,
+    ["Todas"] + MESES,
     default=["Todas"]
 )
 
@@ -118,19 +114,7 @@ if "Todas" not in comp_sel:
     df = df[df["Competência"].isin(comp_sel)]
 
 # =====================================================
-# CONSOLIDAÇÃO FINAL
-# =====================================================
-df_base = (
-    df
-    .groupby(
-        ["Exercício", "Especificação", "Competência"],
-        as_index=False
-    )[["Previsto", "Realizado"]]
-    .sum()
-)
-
-# =====================================================
-# GRÁFICO
+# GRÁFICO (CORRETO)
 # =====================================================
 st.markdown("---")
 st.subheader("📈 Gráfico Comparativo")
@@ -146,26 +130,29 @@ if receita_sel == "Todas":
 elif not tipo_valor:
     st.warning("Selecione ao menos um tipo de valor.")
 else:
-    df_long = df_base.melt(
-        id_vars=["Exercício", "Competência"],
-        value_vars=["Previsto", "Realizado"],
-        var_name="Tipo",
-        value_name="Valor"
-    )
+    linhas = []
 
-    # 🔑 CORREÇÃO CRÍTICA (EVITA CONTAGEM)
-    df_long["Valor"] = pd.to_numeric(
-        df_long["Valor"], errors="coerce"
-    ).fillna(0)
+    for _, row in df.iterrows():
+        for mes in MESES:
+            if "Previsto" in tipo_valor:
+                linhas.append({
+                    "Exercício": row["Exercício"],
+                    "Competência": mes,
+                    "Serie": f"Previsto {row['Exercício']}",
+                    "Valor": row.get(f"Previsto {mes}", 0)
+                })
+            if "Realizado" in tipo_valor:
+                linhas.append({
+                    "Exercício": row["Exercício"],
+                    "Competência": mes,
+                    "Serie": f"Realizado {row['Exercício']}",
+                    "Valor": row.get(f"Realizado {mes}", 0)
+                })
 
-    df_long = df_long[
-        (df_long["Tipo"].isin(tipo_valor)) &
-        (df_long["Valor"] > 0)
-    ]
+    df_long = pd.DataFrame(linhas)
+    df_long["Valor"] = pd.to_numeric(df_long["Valor"], errors="coerce").fillna(0)
 
-    df_long["Serie"] = (
-        df_long["Tipo"] + " " + df_long["Exercício"].astype(str)
-    )
+    df_long = df_long[df_long["Valor"] > 0]
 
     fig = px.bar(
         df_long,
@@ -173,7 +160,7 @@ else:
         y="Valor",
         color="Serie",
         barmode="group",
-        category_orders={"Competência": ordem_meses},
+        category_orders={"Competência": MESES},
         title=f"Comparativo Mensal – {receita_sel}",
         labels={
             "Valor": "Valor (R$)",
@@ -181,8 +168,6 @@ else:
             "Serie": ""
         }
     )
-
-    fig.update_traces(width=0.32)
 
     fig.update_layout(
         height=600,
@@ -199,9 +184,8 @@ else:
 
     st.plotly_chart(fig, use_container_width=True)
 
-
 # =====================================================
-# TABELA
+# TABELA (MANTIDA – JÁ ESTAVA CERTA)
 # =====================================================
 st.markdown("---")
 st.subheader("📋 Metas de Receita – Visão Tabular")
@@ -219,14 +203,14 @@ tabela = (
 tabela.columns = [f"{t} {m}" for t, m in tabela.columns]
 tabela = tabela.reset_index()
 
-colunas_ordenadas = ["Exercício", "Especificação"]
-for mes in ordem_meses:
+ordem_cols = ["Exercício", "Especificação"]
+for mes in MESES:
     for tipo in ["Previsto", "Realizado"]:
         col = f"{tipo} {mes}"
         if col in tabela.columns:
-            colunas_ordenadas.append(col)
+            ordem_cols.append(col)
 
-tabela = tabela[colunas_ordenadas]
+tabela = tabela[ordem_cols]
 
 for col in tabela.columns:
     if col not in ["Exercício", "Especificação"]:
@@ -247,7 +231,4 @@ st.download_button(
     mime="text/csv"
 )
 
-st.caption("Metas de Receita • Filtro inteligente por receita e exercício")
-
-
-
+st.caption("Metas de Receita • Valores mensais reais")
