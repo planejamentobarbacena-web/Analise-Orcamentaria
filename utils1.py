@@ -12,22 +12,19 @@ CABECALHO_ESPERADO = [
 def carregar_dados(pasta_relativa="data/extras"):
     """
     Carrega todos os arquivos CSV de uma pasta e retorna um DataFrame único.
+    Corrige Repasse para float, lidando com R$, pontos e vírgula.
     """
-    # Caminho absoluto baseado na localização deste arquivo
     base_dir = os.path.dirname(os.path.abspath(__file__))
     pasta = os.path.join(base_dir, pasta_relativa)
 
     if not os.path.exists(pasta):
         raise FileNotFoundError(f"Pasta de dados não encontrada: {pasta}")
 
-    # Lista arquivos CSV
     arquivos = [f for f in os.listdir(pasta) if f.endswith(".csv")]
-
     if not arquivos:
         raise FileNotFoundError(f"Nenhum arquivo CSV encontrado na pasta: {pasta}")
 
     dfs = []
-
     for arquivo in arquivos:
         caminho = os.path.join(pasta, arquivo)
         df = pd.read_csv(caminho, sep=";", encoding="utf-8")
@@ -41,18 +38,20 @@ def carregar_dados(pasta_relativa="data/extras"):
             )
 
         df["Arquivo"] = arquivo  # rastreabilidade
+
+        # Converter Repasse robustamente
+        df["Repasse"] = (
+            df["Repasse"]
+            .astype(str)
+            .str.replace(r"[^\d,]", "", regex=True)  # remove tudo que não for dígito ou vírgula
+            .str.replace(",", ".", regex=False)
+            .astype(float)
+        )
+
+        # Garantir que Exercício seja string
+        df["Exercício"] = df["Exercício"].astype(str)
+
         dfs.append(df)
 
     dados = pd.concat(dfs, ignore_index=True)
-
-    # Tratamento de tipos
-    dados["Exercício"] = dados["Exercício"].astype(str)
-    dados["Repasse"] = (
-        dados["Repasse"]
-        .astype(str)
-        .str.replace(".", "", regex=False)
-        .str.replace(",", ".", regex=False)
-        .astype(float)
-    )
-
     return dados
