@@ -197,3 +197,17 @@ st.download_button(
 )
 
 st.caption("Repasse – Administração Indireta • Visão de Consulta")
+
+st.subheader("🧾 Total anual por Credor (conferência)")
+
+total_ano = (
+    df_f
+    .groupby(["Exercício", "Credor"], as_index=False)["Repasse"]
+    .sum()
+)
+
+total_ano["Repasse"] = total_ano["Repasse"].apply(float_para_moeda)
+
+st.dataframe(total_ano, use_container_width=True)
+
+
