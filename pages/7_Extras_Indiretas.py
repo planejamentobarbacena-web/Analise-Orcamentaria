@@ -36,6 +36,14 @@ st.caption("Repasses à Administração Indireta (Despesa Extra)")
 # DADOS
 # ==================================================
 df = carregar_extras()
+st.write("DEBUG - Amostra dos dados")
+st.write(df.head(10))
+
+st.write("DEBUG - Tipos das colunas")
+st.write(df.dtypes)
+
+st.write("DEBUG - Soma do repasse")
+st.write(df["Repasse"].sum())
 
 if df.empty:
     st.info("Nenhum repasse cadastrado.")
@@ -193,3 +201,4 @@ st.download_button(
 )
 
 st.caption("Repasse – Administração Indireta • Visão de Consulta")
+
