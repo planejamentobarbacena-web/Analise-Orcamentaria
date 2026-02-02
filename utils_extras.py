@@ -15,15 +15,9 @@ MESES = [
 COLUNAS = ["Exercício", "Competência", "Credor", "Fonte", "Repasse"]
 
 # ==================================================
-# CONVERSÃO MONETÁRIA (PT-BR BLINDADA)
+# CONVERSÃO MONETÁRIA (PT-BR → FLOAT)
 # ==================================================
 def moeda_para_float(valor):
-    """
-    Converte qualquer valor pt-BR para float:
-    1.234.567,89 -> 1234567.89
-    774.354,06   -> 774354.06
-    7026,92      -> 7026.92
-    """
     if pd.isna(valor):
         return 0.0
 
@@ -42,10 +36,12 @@ def moeda_para_float(valor):
 
 
 def float_para_moeda(valor):
+    if pd.isna(valor):
+        return "R$ 0,00"
     return f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
 # ==================================================
-# CARREGAR EXTRAS
+# CARGA DOS ARQUIVOS extras_YYYY.csv
 # ==================================================
 def carregar_extras():
     dfs = []
@@ -79,7 +75,6 @@ def carregar_extras():
 
     df_final = pd.concat(dfs, ignore_index=True)
     df_final = df_final.dropna(subset=["Exercício"])
-
     df_final["Exercício"] = df_final["Exercício"].astype(int)
 
     return df_final
@@ -87,7 +82,7 @@ def carregar_extras():
 # ==================================================
 # FILTROS
 # ==================================================
-def filtrar_extras(df, exercicios=None, credores=None, competencias=None):
+def filtrar_extras(df, exercicios=None, credores=None, competencias=None, fontes=None):
     df_f = df.copy()
 
     if exercicios:
@@ -98,5 +93,8 @@ def filtrar_extras(df, exercicios=None, credores=None, competencias=None):
 
     if competencias:
         df_f = df_f[df_f["Competência"].isin(competencias)]
+
+    if fontes:
+        df_f = df_f[df_f["Fonte"].isin(fontes)]
 
     return df_f
