@@ -29,7 +29,7 @@ def float_para_moeda(valor):
     return f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
 # ==================================================
-# CARREGAR TODOS OS EXTRAS
+# CARREGAR EXTRAS
 # ==================================================
 def carregar_extras():
     dfs = []
@@ -54,7 +54,7 @@ def carregar_extras():
     return pd.concat(dfs, ignore_index=True)
 
 # ==================================================
-# INSERIR UM NOVO REPASSE (POR EXERCÍCIO)
+# INSERIR REPASSE
 # ==================================================
 def inserir_repasse(exercicio, competencia, credor, fonte, repasse):
     arquivo = os.path.join(DATA_DIR, f"extras_{exercicio}.csv")
