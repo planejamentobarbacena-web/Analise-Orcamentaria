@@ -9,11 +9,15 @@ CABECALHO_ESPERADO = [
     "Repasse"
 ]
 
-def carregar_dados(pasta="dados"):
-    arquivos = [
-        f for f in os.listdir(pasta)
-        if f.endswith(".csv")
-    ]
+def carregar_dados(pasta_relativa="dados"):
+    # Caminho absoluto da raiz do projeto
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    pasta = os.path.join(base_dir, pasta_relativa)
+
+    if not os.path.exists(pasta):
+        raise FileNotFoundError(f"Pasta de dados não encontrada: {pasta}")
+
+    arquivos = [f for f in os.listdir(pasta) if f.endswith(".csv")]
 
     if not arquivos:
         raise FileNotFoundError("Nenhum arquivo CSV encontrado na pasta de dados.")
@@ -23,13 +27,8 @@ def carregar_dados(pasta="dados"):
     for arquivo in arquivos:
         caminho = os.path.join(pasta, arquivo)
 
-        df = pd.read_csv(
-            caminho,
-            sep=";",
-            encoding="utf-8"
-        )
+        df = pd.read_csv(caminho, sep=";", encoding="utf-8")
 
-        # Validação de cabeçalho
         if list(df.columns) != CABECALHO_ESPERADO:
             raise ValueError(
                 f"Arquivo {arquivo} com cabeçalho inválido.\n"
@@ -37,14 +36,12 @@ def carregar_dados(pasta="dados"):
                 f"Encontrado: {list(df.columns)}"
             )
 
-        df["Arquivo"] = arquivo  # rastreabilidade
+        df["Arquivo"] = arquivo
         dfs.append(df)
 
     dados = pd.concat(dfs, ignore_index=True)
 
-    # Tratamento de tipos
     dados["Exercício"] = dados["Exercício"].astype(str)
-
     dados["Repasse"] = (
         dados["Repasse"]
         .astype(str)
