@@ -64,11 +64,7 @@ try:
 
     # Gráfico total por Competência
     st.subheader("📈 Total de Repasse por Competência")
-    agrupado = (
-        filtrado
-        .groupby("Competência", as_index=False)["Repasse"]
-        .sum()
-    )
+    agrupado = filtrado.groupby("Competência", as_index=False)["Repasse"].sum()
 
     fig = px.bar(
         agrupado,
@@ -76,7 +72,6 @@ try:
         y="Repasse",
         text_auto=True
     )
-
     st.plotly_chart(fig, use_container_width=True)
 
     # Total geral
