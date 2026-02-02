@@ -9,7 +9,7 @@ from utils.extras_loader import (
 )
 
 # ==================================================
-# CONFIGURAÇÃO (TEM QUE SER O PRIMEIRO COMANDO)
+# CONFIGURAÇÃO (PRIMEIRA CHAMADA STREAMLIT)
 # ==================================================
 st.set_page_config(
     page_title="Repasse – Indireta",
@@ -95,17 +95,6 @@ if df_f.empty:
     st.stop()
 
 # ==================================================
-# DEBUG
-# ==================================================
-with st.expander("🧪 DEBUG — Valores reais"):
-    st.dataframe(
-        df_f[["Credor", "Competência", "Exercício", "Repasse"]]
-        .sort_values("Repasse", ascending=False)
-        .head(20),
-        use_container_width=True
-    )
-
-# ==================================================
 # GRÁFICO
 # ==================================================
 st.markdown("---")
@@ -156,14 +145,14 @@ st.plotly_chart(fig, use_container_width=True)
 # TABELA DETALHADA
 # ==================================================
 st.markdown("---")
-st.subheader("📋 Detalhamento")
+st.subheader("📋 Detalhamento dos Repasses")
 
 df_tabela = df_f.copy()
 df_tabela["Exercício"] = df_tabela["Exercício"].astype(str)
 df_tabela["Repasse"] = df_tabela["Repasse"].apply(float_para_moeda)
 
 df_tabela["Competência"] = pd.Categorical(
-    df_tabela["Competência"].str.strip().str.upper(),
+    df_tabela["Competência"].str.upper().str.strip(),
     categories=MESES,
     ordered=True
 )
@@ -174,18 +163,3 @@ df_tabela = df_tabela.sort_values(
 
 st.dataframe(df_tabela, use_container_width=True, hide_index=True)
 
-# ==================================================
-# TOTAL ANUAL
-# ==================================================
-st.markdown("---")
-st.subheader("🧾 Total anual por Credor")
-
-total_ano = (
-    df_f
-    .groupby(["Exercício", "Credor"], as_index=False)["Repasse"]
-    .sum()
-)
-
-total_ano["Repasse"] = total_ano["Repasse"].apply(float_para_moeda)
-
-st.dataframe(total_ano, use_container_width=True)
