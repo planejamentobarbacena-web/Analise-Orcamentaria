@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 from pathlib import Path
+import re
 
 st.set_page_config(page_title="Repasses Extras", layout="wide")
 st.title("💰 Repasses Extras – Indiretas")
@@ -14,8 +15,22 @@ MESES = [
     "JULHO", "AGOSTO", "SETEMBRO", "OUTUBRO", "NOVEMBRO", "DEZEMBRO"
 ]
 
-BASE_DIR = Path(__file__).parent.parent  # raiz do projeto
-DATA_DIR = BASE_DIR / "data"              # pasta onde ficam os CSVs
+BASE_DIR = Path(__file__).parent.parent
+DATA_DIR = BASE_DIR / "data" / "extras"
+
+# -------------------------
+# EXERCÍCIOS DISPONÍVEIS
+# -------------------------
+arquivos = list(DATA_DIR.glob("extras_*.csv"))
+
+if not arquivos:
+    st.error("Nenhum arquivo extras_ano.csv encontrado em data/extras/")
+    st.stop()
+
+anos_disponiveis = sorted(
+    int(re.search(r"extras_(\d{4})", arq.name).group(1))
+    for arq in arquivos
+)
 
 # -------------------------
 # LEITURA DO CSV
@@ -29,12 +44,7 @@ def carregar_dados(exercicio: int):
         st.error(f"Arquivo não encontrado: {caminho}")
         st.stop()
 
-    df = pd.read_csv(
-        caminho,
-        sep=";",
-        encoding="utf-8"
-    )
-
+    df = pd.read_csv(caminho, sep=";", encoding="utf-8")
     df.columns = df.columns.str.strip()
 
     df["Exercício"] = df["Exercício"].astype(int)
@@ -56,20 +66,18 @@ def carregar_dados(exercicio: int):
     return df
 
 # -------------------------
-# FILTRO EXERCÍCIO
+# FILTROS
 # -------------------------
 st.sidebar.header("🔎 Filtros")
 
 exercicio = st.sidebar.selectbox(
     "Exercício",
-    [2023, 2024]  # ajuste se tiver mais
+    anos_disponiveis,
+    index=len(anos_disponiveis) - 1
 )
 
 df = carregar_dados(exercicio)
 
-# -------------------------
-# FILTROS
-# -------------------------
 credor_sel = st.sidebar.multiselect(
     "Credor",
     sorted(df["Credor"].unique()),
