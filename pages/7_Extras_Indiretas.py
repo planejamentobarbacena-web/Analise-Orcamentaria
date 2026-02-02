@@ -9,7 +9,7 @@ from utils.extras_loader import (
 )
 
 # ==================================================
-# FUNÇÃO LOCAL DE FORMATAÇÃO (APENAS VISUAL)
+# FUNÇÕES AUXILIARES
 # ==================================================
 def float_para_moeda(valor):
     return f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
@@ -99,22 +99,24 @@ if df_f.empty:
     st.warning("Nenhum dado para os filtros selecionados.")
     st.stop()
 
-st.subheader("DEBUG — Valores reais")
-st.dataframe(
-    df[["Credor", "Competência", "Exercício", "Repasse"]]
-    .sort_values("Repasse", ascending=False)
-    .head(20)
-)
-
-st.write("Máximo:", df["Repasse"].max())
-st.write("Mínimo:", df["Repasse"].min())
-
+# ==================================================
+# DEBUG (CONFIRMAÇÃO REAL DOS VALORES)
+# ==================================================
+with st.expander("🧪 DEBUG — Valores reais (checagem)"):
+    st.dataframe(
+        df[["Credor", "Competência", "Exercício", "Repasse"]]
+        .sort_values("Repasse", ascending=False)
+        .head(20),
+        use_container_width=True
+    )
+    st.write("Máximo:", float_para_moeda(df["Repasse"].max()))
+    st.write("Mínimo:", float_para_moeda(df["Repasse"].min()))
 
 # ==================================================
-# GRÁFICO
+# GRÁFICO (EM MILHÕES — CORRETO)
 # ==================================================
 st.markdown("---")
-st.subheader("📊 Evolução Mensal dos Repasses")
+st.subheader("📊 Evolução Mensal dos Repasses (R$ milhões)")
 
 df_graf = (
     df_f
@@ -130,28 +132,25 @@ df_graf["Competência"] = pd.Categorical(
 
 df_graf["Exercício"] = df_graf["Exercício"].astype(str)
 
+# 🔹 CONVERSÃO PARA MILHÕES (PONTO-CHAVE)
+df_graf["Repasse_mi"] = df_graf["Repasse"] / 1_000_000
+
 fig = px.bar(
     df_graf,
     x="Competência",
-    y="Repasse",
+    y="Repasse_mi",
     color="Exercício",
     facet_col="Credor",
     barmode="group",
     labels={
         "Competência": "Mês",
-        "Repasse": "Valor (R$)",
+        "Repasse_mi": "Repasse (R$ milhões)",
         "Exercício": "Exercício"
     },
     category_orders={
         "Competência": MESES
-    }
-)
-
-fig.update_layout(
-    height=520,
-    yaxis_tickprefix="R$ ",
-    yaxis_tickformat=",.0f",
-    legend_title_text="Exercício"
+    },
+    height=520
 )
 
 fig.for_each_annotation(
@@ -161,7 +160,7 @@ fig.for_each_annotation(
 st.plotly_chart(fig, use_container_width=True)
 
 # ==================================================
-# TABELA
+# TABELA DETALHADA
 # ==================================================
 st.markdown("---")
 st.subheader("📋 Detalhamento")
@@ -198,5 +197,3 @@ st.download_button(
 )
 
 st.caption("Repasse – Administração Indireta • Visão de Consulta")
-
-
