@@ -1,195 +1,102 @@
-import streamlit as st
+import os
 import pandas as pd
-import plotly.express as px
-
-from utils_extras import (
-    carregar_extras,
-    filtrar_extras,
-    float_para_moeda,
-    MESES
-)
 
 # ==================================================
-# SEGURANÇA
+# CONFIGURAÇÃO
 # ==================================================
-if "logado" not in st.session_state or not st.session_state.logado:
-    st.warning("🔒 Acesso negado.")
-    st.stop()
+DATA_DIR = "data/extras"
+os.makedirs(DATA_DIR, exist_ok=True)
 
-if st.session_state.get("perfil") not in ["administrador", "consulta"]:
-    st.error("🚫 Perfil sem permissão.")
-    st.stop()
+MESES = [
+    "JANEIRO", "FEVEREIRO", "MARÇO", "ABRIL", "MAIO", "JUNHO",
+    "JULHO", "AGOSTO", "SETEMBRO", "OUTUBRO", "NOVEMBRO", "DEZEMBRO"
+]
 
-# ==================================================
-# CONFIGURAÇÃO DA PÁGINA
-# ==================================================
-st.set_page_config(
-    page_title="Repasse – Indireta",
-    page_icon="🏛️",
-    layout="wide"
-)
-
-st.title("🏛️ Repasse – Indireta")
-st.caption("Repasses à Administração Indireta (Despesa Extra)")
+COLUNAS = ["Exercício", "Competência", "Credor", "Fonte", "Repasse"]
 
 # ==================================================
-# DADOS
+# CONVERSÃO MONETÁRIA (PT-BR BLINDADA)
 # ==================================================
-df = carregar_extras()
+def moeda_para_float(valor):
+    """
+    Converte qualquer valor pt-BR para float:
+    1.234.567,89 -> 1234567.89
+    774.354,06   -> 774354.06
+    7026,92      -> 7026.92
+    """
+    if pd.isna(valor):
+        return 0.0
 
-if df.empty:
-    st.info("Nenhum repasse cadastrado.")
-    st.stop()
+    valor = str(valor).strip()
+    valor = valor.replace("R$", "").replace(" ", "")
 
-# ==================================================
-# FILTROS (CREDOR → EXERCÍCIO)
-# ==================================================
-st.subheader("🎯 Filtros")
+    if "," in valor:
+        valor = valor.replace(".", "").replace(",", ".")
+    else:
+        valor = valor.replace(",", "")
 
-col1, col2 = st.columns(2)
+    try:
+        return float(valor)
+    except ValueError:
+        return 0.0
 
-credores = sorted(df["Credor"].unique())
-credor_sel = col1.multiselect(
-    "Credor",
-    credores,
-    default=credores
-)
 
-exercicios = sorted(df["Exercício"].unique())
-ex_sel = col2.multiselect(
-    "Exercício",
-    exercicios,
-    default=exercicios
-)
-
-col3, col4 = st.columns(2)
-
-comp_opcoes = ["Todos"] + MESES
-comp_sel = col3.multiselect(
-    "Competência",
-    comp_opcoes,
-    default=["Todos"]
-)
-
-fonte_opcoes = ["Todos"] + sorted(df["Fonte"].unique())
-fonte_sel = col4.multiselect(
-    "Fonte",
-    fonte_opcoes,
-    default=["Todos"]
-)
+def float_para_moeda(valor):
+    return f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
 # ==================================================
-# FILTRAGEM
+# CARREGAR EXTRAS
 # ==================================================
-competencias_filtrar = [c for c in comp_sel if c != "Todos"]
+def carregar_extras():
+    dfs = []
 
-df_f = filtrar_extras(
-    df,
-    exercicios=ex_sel,
-    credores=credor_sel,
-    competencias=competencias_filtrar
-)
+    if not os.path.exists(DATA_DIR):
+        return pd.DataFrame(columns=COLUNAS)
 
-if "Todos" not in fonte_sel:
-    df_f = df_f[df_f["Fonte"].isin(fonte_sel)]
+    for arq in os.listdir(DATA_DIR):
+        if arq.startswith("extras_") and arq.endswith(".csv"):
+            caminho = os.path.join(DATA_DIR, arq)
 
-# GARANTIA ABSOLUTA DE TIPO
-df_f["Repasse"] = pd.to_numeric(df_f["Repasse"], errors="coerce").fillna(0)
+            df = pd.read_csv(
+                caminho,
+                sep=";",
+                dtype=str,
+                encoding="utf-8"
+            )
 
-# ==================================================
-# GRÁFICO
-# ==================================================
-st.markdown("---")
-st.subheader("📈 Evolução Mensal dos Repasses")
+            df.columns = [c.strip() for c in df.columns]
 
-df_graf = (
-    df_f
-    .groupby(["Credor", "Competência", "Exercício"], as_index=False)
-    .agg({"Repasse": "sum"})
-)
+            df["Exercício"] = pd.to_numeric(df["Exercício"], errors="coerce")
+            df["Competência"] = df["Competência"].str.upper().str.strip()
+            df["Credor"] = df["Credor"].str.strip()
+            df["Fonte"] = df["Fonte"].str.strip()
+            df["Repasse"] = df["Repasse"].apply(moeda_para_float)
 
-df_graf["Competência"] = pd.Categorical(
-    df_graf["Competência"],
-    categories=MESES,
-    ordered=True
-)
+            dfs.append(df)
 
-df_graf = df_graf.sort_values(
-    ["Credor", "Exercício", "Competência"]
-)
+    if not dfs:
+        return pd.DataFrame(columns=COLUNAS)
 
-df_graf["Exercício"] = df_graf["Exercício"].astype(str)
+    df_final = pd.concat(dfs, ignore_index=True)
+    df_final = df_final.dropna(subset=["Exercício"])
 
-fig = px.bar(
-    df_graf,
-    x="Competência",
-    y="Repasse",
-    color="Exercício",
-    facet_col="Credor",
-    barmode="group",
-    labels={
-        "Competência": "Mês",
-        "Repasse": "Valor (R$)",
-        "Exercício": "Ano"
-    }
-)
+    df_final["Exercício"] = df_final["Exercício"].astype(int)
 
-fig.update_layout(
-    height=520,
-    yaxis_tickprefix="R$ ",
-    yaxis_tickformat=",.0f",
-    legend=dict(
-        orientation="h",
-        y=-0.25,
-        x=0.5,
-        xanchor="center"
-    )
-)
-
-fig.for_each_annotation(
-    lambda a: a.update(text=a.text.split("=")[-1])
-)
-
-st.plotly_chart(fig, use_container_width=True)
+    return df_final
 
 # ==================================================
-# TABELA
+# FILTROS
 # ==================================================
-st.markdown("---")
-st.subheader("📋 Detalhamento dos Repasses")
+def filtrar_extras(df, exercicios=None, credores=None, competencias=None):
+    df_f = df.copy()
 
-df_tabela = df_f.copy()
+    if exercicios:
+        df_f = df_f[df_f["Exercício"].isin(exercicios)]
 
-df_tabela["Competência"] = pd.Categorical(
-    df_tabela["Competência"],
-    categories=MESES,
-    ordered=True
-)
+    if credores:
+        df_f = df_f[df_f["Credor"].isin(credores)]
 
-df_tabela = df_tabela.sort_values(
-    ["Credor", "Exercício", "Competência"]
-)
+    if competencias:
+        df_f = df_f[df_f["Competência"].isin(competencias)]
 
-df_tabela["Exercício"] = df_tabela["Exercício"].astype(str)
-df_tabela["Repasse"] = df_tabela["Repasse"].apply(float_para_moeda)
-
-st.dataframe(
-    df_tabela,
-    use_container_width=True,
-    hide_index=True
-)
-
-# ==================================================
-# DOWNLOAD
-# ==================================================
-st.markdown("---")
-
-csv = df_tabela.to_csv(index=False, sep=";", encoding="utf-8")
-st.download_button(
-    "⬇️ Baixar CSV",
-    csv,
-    file_name="repasse_indireta.csv",
-    mime="text/csv"
-)
-
-st.caption("Repasse – Administração Indireta • Visão de Consulta")
+    return df_f
