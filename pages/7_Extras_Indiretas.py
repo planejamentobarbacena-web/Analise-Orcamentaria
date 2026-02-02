@@ -2,12 +2,17 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 
-from utils_extras import (
+from utils.extras_loader import (
     carregar_extras,
     filtrar_extras,
-    float_para_moeda,
     MESES
 )
+
+# ==================================================
+# FUNÇÃO LOCAL DE FORMATAÇÃO (APENAS VISUAL)
+# ==================================================
+def float_para_moeda(valor):
+    return f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
 # ==================================================
 # SEGURANÇA
@@ -33,7 +38,7 @@ st.title("🏛️ Repasse – Indireta")
 st.caption("Repasses à Administração Indireta (Despesa Extra)")
 
 # ==================================================
-# CARGA
+# CARGA DOS DADOS
 # ==================================================
 df = carregar_extras()
 
@@ -49,10 +54,18 @@ st.subheader("🎯 Filtros")
 col1, col2 = st.columns(2)
 
 exercicios = sorted(df["Exercício"].unique())
-ex_sel = col1.multiselect("Exercício", exercicios, default=exercicios)
+ex_sel = col1.multiselect(
+    "Exercício",
+    exercicios,
+    default=exercicios
+)
 
 credores = sorted(df["Credor"].unique())
-credor_sel = col2.multiselect("Credor", credores, default=credores)
+credor_sel = col2.multiselect(
+    "Credor",
+    credores,
+    default=credores
+)
 
 col3, col4 = st.columns(2)
 
@@ -82,6 +95,10 @@ df_f = filtrar_extras(
     fontes=fontes
 )
 
+if df_f.empty:
+    st.warning("Nenhum dado para os filtros selecionados.")
+    st.stop()
+
 # ==================================================
 # GRÁFICO
 # ==================================================
@@ -90,8 +107,8 @@ st.subheader("📊 Evolução Mensal dos Repasses")
 
 df_graf = (
     df_f
-    .groupby(["Exercício", "Competência", "Credor"], as_index=False)["Repasse"]
-    .sum()
+    .groupby(["Exercício", "Competência", "Credor"], as_index=False)
+    .agg({"Repasse": "sum"})
 )
 
 df_graf["Competência"] = pd.Categorical(
@@ -152,7 +169,11 @@ df_tabela = df_tabela.sort_values(
     ["Exercício", "Competência", "Credor"]
 )
 
-st.dataframe(df_tabela, use_container_width=True, hide_index=True)
+st.dataframe(
+    df_tabela,
+    use_container_width=True,
+    hide_index=True
+)
 
 # ==================================================
 # DOWNLOAD
