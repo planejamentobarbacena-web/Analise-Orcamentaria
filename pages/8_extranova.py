@@ -15,7 +15,7 @@ st.set_page_config(
 st.title("📊 Consulta de Repasses")
 
 try:
-    # Carrega dados da pasta data/extras
+    # Carrega dados
     dados = carregar_dados("data/extras")
 
     # Filtros
@@ -61,6 +61,10 @@ try:
     # Mostra tabela
     st.subheader("📋 Tabela")
     st.dataframe(filtrado, use_container_width=True)
+
+    # Checagem rápida: valores de Repasse
+    st.write("🔍 Valores de Repasse (pré-visualização)")
+    st.write(filtrado[["Competência", "Repasse"]])
 
     # Gráfico total por Competência
     st.subheader("📈 Total de Repasse por Competência")
