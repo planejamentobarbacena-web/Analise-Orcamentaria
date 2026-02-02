@@ -30,10 +30,10 @@ st.set_page_config(
 )
 
 st.title("🏛️ Repasse – Indireta")
-st.caption("Repasses à Administração Indireta (Despesa Extra)")
+st.caption("Repasses à Administração Indireta (Saída por Despesa Extra)")
 
 # ==================================================
-# DADOS
+# CARGA DOS DADOS
 # ==================================================
 df = carregar_extras()
 
@@ -42,43 +42,25 @@ if df.empty:
     st.stop()
 
 # ==================================================
-# FILTROS (ORGANIZAÇÃO INVERTIDA)
+# FILTROS
 # ==================================================
 st.subheader("🎯 Filtros")
 
-# 🔁 LINHA 1: Credor | Exercício
 col1, col2 = st.columns(2)
 
+exercicios = sorted(df["Exercício"].unique())
+ex_sel = col1.multiselect("Exercício", exercicios, default=exercicios)
+
 credores = sorted(df["Credor"].unique())
-credor_sel = col1.multiselect(
-    "Credor",
-    credores,
-    default=credores
-)
+credor_sel = col2.multiselect("Credor", credores, default=credores)
 
-exercicios = sorted(df["Exercício"].dropna().astype(int).unique())
-ex_sel = col2.multiselect(
-    "Exercício",
-    exercicios,
-    default=exercicios
-)
-
-# 🔁 LINHA 2: Competência | Fonte
 col3, col4 = st.columns(2)
 
 comp_opcoes = ["Todos"] + MESES
-comp_sel = col3.multiselect(
-    "Competência",
-    comp_opcoes,
-    default=["Todos"]
-)
+comp_sel = col3.multiselect("Competência", comp_opcoes, default=["Todos"])
 
 fonte_opcoes = ["Todos"] + sorted(df["Fonte"].unique())
-fonte_sel = col4.multiselect(
-    "Fonte",
-    fonte_opcoes,
-    default=["Todos"]
-)
+fonte_sel = col4.multiselect("Fonte", fonte_opcoes, default=["Todos"])
 
 # ==================================================
 # FILTRAGEM
@@ -95,14 +77,14 @@ df_f = filtrar_extras(
 if "Todos" not in fonte_sel:
     df_f = df_f[df_f["Fonte"].isin(fonte_sel)]
 
-# 🔒 BLINDAGEM FINAL DO REPASSE
+# 🔑 GARANTIA DE TIPO NUMÉRICO (CRÍTICO PARA O GRÁFICO)
 df_f["Repasse"] = pd.to_numeric(df_f["Repasse"], errors="coerce").fillna(0)
 
 # ==================================================
 # GRÁFICO
 # ==================================================
 st.markdown("---")
-st.subheader("📈 Evolução Mensal dos Repasses")
+st.subheader("📈 Evolução Mensal dos Repasses por Credor")
 
 df_graf = (
     df_f
@@ -125,6 +107,10 @@ fig = px.bar(
     color="Exercício",
     facet_col="Credor",
     barmode="group",
+    category_orders={
+        "Competência": MESES,
+        "Exercício": sorted(df_graf["Exercício"].unique())
+    },
     labels={
         "Competência": "Mês",
         "Repasse": "Valor (R$)",
@@ -134,14 +120,18 @@ fig = px.bar(
 
 fig.update_layout(
     height=520,
+    bargap=0.30,
+    bargroupgap=0.08,
     yaxis_tickprefix="R$ ",
     yaxis_tickformat=",.0f",
     legend=dict(
         orientation="h",
-        y=-0.25,
-        x=0.5,
-        xanchor="center"
-    )
+        yanchor="top",
+        y=-0.28,
+        xanchor="center",
+        x=0.5
+    ),
+    legend_title_text="Exercício"
 )
 
 fig.for_each_annotation(
@@ -154,11 +144,17 @@ st.plotly_chart(fig, use_container_width=True)
 # TABELA
 # ==================================================
 st.markdown("---")
-st.subheader("📋 Detalhamento")
+st.subheader("📋 Detalhamento dos Repasses")
 
 df_tabela = df_f.copy()
 df_tabela["Exercício"] = df_tabela["Exercício"].astype(str)
 df_tabela["Repasse"] = df_tabela["Repasse"].apply(float_para_moeda)
+
+df_tabela["Competência"] = pd.Categorical(
+    df_tabela["Competência"],
+    categories=MESES,
+    ordered=True
+)
 
 df_tabela = df_tabela.sort_values(
     ["Exercício", "Competência", "Credor"]
@@ -183,4 +179,4 @@ st.download_button(
     mime="text/csv"
 )
 
-st.caption("Repasse – Administração Indireta • Consulta")
+st.caption("Repasse – Administração Indireta • Visão de Consulta")
