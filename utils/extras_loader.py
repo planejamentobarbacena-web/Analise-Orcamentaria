@@ -68,10 +68,16 @@ def carregar_extras():
         df["Fonte"] = df["Fonte"].str.strip()
 
         df["Repasse"] = (
-            df["Repasse"]
-            .str.replace(",", ".", regex=False)
-            .astype(float)
-        )
+        df["Repasse"]
+        .astype(str)
+        .str.replace("R$", "", regex=False)
+        .str.replace(".", "", regex=False)
+        .str.replace(",", ".", regex=False)
+        .str.strip()
+    )
+
+df["Repasse"] = pd.to_numeric(df["Repasse"], errors="coerce").fillna(0.0)
+
 
         dfs.append(df[COLUNAS_OBRIGATORIAS])
 
