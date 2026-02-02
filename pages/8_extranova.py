@@ -1,5 +1,10 @@
 import streamlit as st
 import plotly.express as px
+import sys
+import os
+
+# Ajuste de caminho para importar utils1
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from utils1 import carregar_dados
 
 st.set_page_config(
@@ -10,10 +15,11 @@ st.set_page_config(
 st.title("📊 Consulta de Repasses")
 
 try:
-    dados = carregar_dados("dados")
+    # Carrega dados da pasta data/extras
+    dados = carregar_dados("data/extras")
 
+    # Filtros
     st.subheader("🔎 Filtros")
-
     col1, col2, col3, col4 = st.columns(4)
 
     with col1:
@@ -44,6 +50,7 @@ try:
             default=sorted(dados["Fonte"].unique())
         )
 
+    # Aplica filtros
     filtrado = dados[
         (dados["Exercício"].isin(exercicio)) &
         (dados["Competência"].isin(competencia)) &
@@ -51,11 +58,12 @@ try:
         (dados["Fonte"].isin(fonte))
     ]
 
+    # Mostra tabela
     st.subheader("📋 Tabela")
     st.dataframe(filtrado, use_container_width=True)
 
+    # Gráfico total por Competência
     st.subheader("📈 Total de Repasse por Competência")
-
     agrupado = (
         filtrado
         .groupby("Competência", as_index=False)["Repasse"]
@@ -71,17 +79,13 @@ try:
 
     st.plotly_chart(fig, use_container_width=True)
 
+    # Total geral
     total = filtrado["Repasse"].sum()
-
     st.metric(
         "💰 Total Geral",
-        f"R$ {total:,.2f}"
-        .replace(",", "X")
-        .replace(".", ",")
-        .replace("X", ".")
+        f"R$ {total:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
     )
 
 except Exception as e:
     st.error("❌ Erro ao carregar os dados")
     st.exception(e)
-
