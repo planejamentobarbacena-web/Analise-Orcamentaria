@@ -18,11 +18,20 @@ COLUNAS = ["Exercício", "Competência", "Credor", "Fonte", "Repasse"]
 # FUNÇÕES AUXILIARES
 # ==================================================
 def moeda_para_float(valor):
+    """
+    Converte 'R$ 1.234.567,89' em 1234567.89
+    """
     if pd.isna(valor):
         return 0.0
-    valor = str(valor).replace("R$", "").strip()
+
+    valor = str(valor).strip()
+    valor = valor.replace("R$", "").strip()
     valor = valor.replace(".", "").replace(",", ".")
-    return float(valor) if valor else 0.0
+
+    try:
+        return float(valor)
+    except ValueError:
+        return 0.0
 
 
 def float_para_moeda(valor):
@@ -40,10 +49,20 @@ def carregar_extras():
     for arq in os.listdir(DATA_DIR):
         if arq.startswith("extras_") and arq.endswith(".csv"):
             caminho = os.path.join(DATA_DIR, arq)
-            df = pd.read_csv(caminho, sep=";", dtype=str)
 
-            df["Exercício"] = df["Exercício"].astype(int)
-            df["Competência"] = df["Competência"].str.upper()
+            df = pd.read_csv(
+                caminho,
+                sep=";",
+                dtype=str,
+                encoding="utf-8"
+            )
+
+            df.columns = [c.strip() for c in df.columns]
+
+            df["Exercício"] = pd.to_numeric(df["Exercício"], errors="coerce").astype("Int64")
+            df["Competência"] = df["Competência"].str.upper().str.strip()
+            df["Credor"] = df["Credor"].str.strip()
+            df["Fonte"] = df["Fonte"].str.strip()
             df["Repasse"] = df["Repasse"].apply(moeda_para_float)
 
             dfs.append(df)
@@ -51,39 +70,8 @@ def carregar_extras():
     if not dfs:
         return pd.DataFrame(columns=COLUNAS)
 
-    return pd.concat(dfs, ignore_index=True)
-
-# ==================================================
-# INSERIR REPASSE
-# ==================================================
-def inserir_repasse(exercicio, competencia, credor, fonte, repasse):
-    arquivo = os.path.join(DATA_DIR, f"extras_{exercicio}.csv")
-
-    if os.path.exists(arquivo):
-        df = pd.read_csv(arquivo, sep=";", dtype=str)
-        df["Repasse"] = df["Repasse"].apply(moeda_para_float)
-    else:
-        df = pd.DataFrame(columns=COLUNAS)
-
-    novo = pd.DataFrame([{
-        "Exercício": int(exercicio),
-        "Competência": competencia.upper(),
-        "Credor": credor,
-        "Fonte": fonte,
-        "Repasse": float(repasse)
-    }])
-
-    df = pd.concat([df, novo], ignore_index=True)
-
-    df_save = df.copy()
-    df_save["Repasse"] = df_save["Repasse"].apply(float_para_moeda)
-
-    df_save.to_csv(
-        arquivo,
-        sep=";",
-        index=False,
-        encoding="utf-8"
-    )
+    df_final = pd.concat(dfs, ignore_index=True)
+    return df_final.dropna(subset=["Exercício"])
 
 # ==================================================
 # FILTROS
