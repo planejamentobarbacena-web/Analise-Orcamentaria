@@ -20,18 +20,10 @@ COLUNAS_OBRIGATORIAS = [
 ]
 
 # ==================================================
-# FORMATADOR
-# ==================================================
-def float_para_moeda(valor):
-    try:
-        return f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-    except Exception:
-        return "R$ 0,00"
-
-# ==================================================
-# CARGA
+# CARGA DOS DADOS
 # ==================================================
 def carregar_extras():
+
     if not os.path.exists(DATA_DIR):
         return pd.DataFrame(columns=COLUNAS_OBRIGATORIAS)
 
@@ -57,6 +49,9 @@ def carregar_extras():
         if not set(COLUNAS_OBRIGATORIAS).issubset(df.columns):
             continue
 
+        # =============================
+        # NORMALIZAÇÕES
+        # =============================
         df["Exercício"] = (
             df["Exercício"]
             .str.replace(r"\D", "", regex=True)
@@ -67,17 +62,22 @@ def carregar_extras():
         df["Credor"] = df["Credor"].str.strip()
         df["Fonte"] = df["Fonte"].str.strip()
 
+        # =============================
+        # REPASSE — BLINDADO
+        # =============================
         df["Repasse"] = (
-        df["Repasse"]
-        .astype(str)
-        .str.replace("R$", "", regex=False)
-        .str.replace(".", "", regex=False)
-        .str.replace(",", ".", regex=False)
-        .str.strip()
-    )
+            df["Repasse"]
+            .astype(str)
+            .str.replace("R$", "", regex=False)
+            .str.replace(".", "", regex=False)
+            .str.replace(",", ".", regex=False)
+            .str.strip()
+        )
 
-df["Repasse"] = pd.to_numeric(df["Repasse"], errors="coerce").fillna(0.0)
-
+        df["Repasse"] = pd.to_numeric(
+            df["Repasse"],
+            errors="coerce"
+        ).fillna(0.0)
 
         dfs.append(df[COLUNAS_OBRIGATORIAS])
 
