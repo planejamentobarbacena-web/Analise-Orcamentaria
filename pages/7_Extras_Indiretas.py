@@ -42,11 +42,10 @@ if df.empty:
     st.stop()
 
 # ==================================================
-# FILTROS (ORGANIZAÇÃO INVERTIDA)
+# FILTROS (CREDOR → EXERCÍCIO)
 # ==================================================
 st.subheader("🎯 Filtros")
 
-# 🔁 LINHA 1: Credor | Exercício
 col1, col2 = st.columns(2)
 
 credores = sorted(df["Credor"].unique())
@@ -56,14 +55,13 @@ credor_sel = col1.multiselect(
     default=credores
 )
 
-exercicios = sorted(df["Exercício"].dropna().astype(int).unique())
+exercicios = sorted(df["Exercício"].unique())
 ex_sel = col2.multiselect(
     "Exercício",
     exercicios,
     default=exercicios
 )
 
-# 🔁 LINHA 2: Competência | Fonte
 col3, col4 = st.columns(2)
 
 comp_opcoes = ["Todos"] + MESES
@@ -95,7 +93,7 @@ df_f = filtrar_extras(
 if "Todos" not in fonte_sel:
     df_f = df_f[df_f["Fonte"].isin(fonte_sel)]
 
-# 🔒 BLINDAGEM FINAL DO REPASSE
+# GARANTIA ABSOLUTA DE TIPO
 df_f["Repasse"] = pd.to_numeric(df_f["Repasse"], errors="coerce").fillna(0)
 
 # ==================================================
@@ -114,6 +112,10 @@ df_graf["Competência"] = pd.Categorical(
     df_graf["Competência"],
     categories=MESES,
     ordered=True
+)
+
+df_graf = df_graf.sort_values(
+    ["Credor", "Exercício", "Competência"]
 )
 
 df_graf["Exercício"] = df_graf["Exercício"].astype(str)
@@ -154,15 +156,22 @@ st.plotly_chart(fig, use_container_width=True)
 # TABELA
 # ==================================================
 st.markdown("---")
-st.subheader("📋 Detalhamento")
+st.subheader("📋 Detalhamento dos Repasses")
 
 df_tabela = df_f.copy()
-df_tabela["Exercício"] = df_tabela["Exercício"].astype(str)
-df_tabela["Repasse"] = df_tabela["Repasse"].apply(float_para_moeda)
+
+df_tabela["Competência"] = pd.Categorical(
+    df_tabela["Competência"],
+    categories=MESES,
+    ordered=True
+)
 
 df_tabela = df_tabela.sort_values(
-    ["Exercício", "Competência", "Credor"]
+    ["Credor", "Exercício", "Competência"]
 )
+
+df_tabela["Exercício"] = df_tabela["Exercício"].astype(str)
+df_tabela["Repasse"] = df_tabela["Repasse"].apply(float_para_moeda)
 
 st.dataframe(
     df_tabela,
@@ -183,4 +192,4 @@ st.download_button(
     mime="text/csv"
 )
 
-st.caption("Repasse – Administração Indireta • Consulta")
+st.caption("Repasse – Administração Indireta • Visão de Consulta")
