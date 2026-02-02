@@ -9,6 +9,15 @@ from utils.extras_loader import (
 )
 
 # ==================================================
+# CONFIGURAÇÃO (TEM QUE SER O PRIMEIRO COMANDO)
+# ==================================================
+st.set_page_config(
+    page_title="Repasse – Indireta",
+    page_icon="🏛️",
+    layout="wide"
+)
+
+# ==================================================
 # FUNÇÕES AUXILIARES
 # ==================================================
 def float_para_moeda(valor):
@@ -26,14 +35,8 @@ if st.session_state.get("perfil") not in ["administrador", "consulta"]:
     st.stop()
 
 # ==================================================
-# CONFIGURAÇÃO
+# TÍTULO
 # ==================================================
-st.set_page_config(
-    page_title="Repasse – Indireta",
-    page_icon="🏛️",
-    layout="wide"
-)
-
 st.title("🏛️ Repasse – Indireta")
 st.caption("Repasses à Administração Indireta (Despesa Extra)")
 
@@ -76,7 +79,7 @@ fontes_sel = col4.multiselect(
 # ==================================================
 # APLICA FILTROS
 # ==================================================
-competencias = [c for c in competencias_sel if c != "Todos"]
+competencias = None if "Todos" in competencias_sel else competencias_sel
 fontes = None if "Todos" in fontes_sel else fontes_sel
 
 df_f = filtrar_extras(
@@ -92,20 +95,18 @@ if df_f.empty:
     st.stop()
 
 # ==================================================
-# DEBUG (CONFIRMAÇÃO REAL)
+# DEBUG
 # ==================================================
-with st.expander("🧪 DEBUG — Valores reais (checagem)"):
+with st.expander("🧪 DEBUG — Valores reais"):
     st.dataframe(
         df_f[["Credor", "Competência", "Exercício", "Repasse"]]
         .sort_values("Repasse", ascending=False)
         .head(20),
         use_container_width=True
     )
-    st.write("Máximo:", float_para_moeda(df_f["Repasse"].max()))
-    st.write("Mínimo:", float_para_moeda(df_f["Repasse"].min()))
 
 # ==================================================
-# GRÁFICO — AGORA FUNCIONA
+# GRÁFICO
 # ==================================================
 st.markdown("---")
 st.subheader("📊 Evolução Mensal dos Repasses (R$ milhões)")
@@ -117,17 +118,9 @@ df_graf = (
     .sum()
 )
 
-# 🔧 NORMALIZAÇÃO CRÍTICA
-df_graf["Competência"] = (
-    df_graf["Competência"]
-    .str.upper()
-    .str.strip()
-)
-
-# 🔥 MANTÉM SOMENTE MESES VÁLIDOS
+df_graf["Competência"] = df_graf["Competência"].str.upper().str.strip()
 df_graf = df_graf[df_graf["Competência"].isin(MESES)]
 
-# ORDENAR DEPOIS DE LIMPAR
 df_graf["Competência"] = pd.Categorical(
     df_graf["Competência"],
     categories=MESES,
@@ -160,7 +153,7 @@ fig.for_each_annotation(
 st.plotly_chart(fig, use_container_width=True)
 
 # ==================================================
-# TABELA
+# TABELA DETALHADA
 # ==================================================
 st.markdown("---")
 st.subheader("📋 Detalhamento")
@@ -185,7 +178,7 @@ st.dataframe(df_tabela, use_container_width=True, hide_index=True)
 # TOTAL ANUAL
 # ==================================================
 st.markdown("---")
-st.subheader("🧾 Total anual por Credor (conferência)")
+st.subheader("🧾 Total anual por Credor")
 
 total_ano = (
     df_f
