@@ -12,7 +12,7 @@ CABECALHO_ESPERADO = [
 def carregar_dados(pasta_relativa="data/extras"):
     """
     Carrega todos os arquivos CSV de uma pasta e retorna um DataFrame único.
-    Corrige Repasse para float, lidando com R$, pontos e vírgula.
+    Converte 'Repasse' para float, mesmo com R$, pontos ou vírgula.
     """
     base_dir = os.path.dirname(os.path.abspath(__file__))
     pasta = os.path.join(base_dir, pasta_relativa)
@@ -29,7 +29,7 @@ def carregar_dados(pasta_relativa="data/extras"):
         caminho = os.path.join(pasta, arquivo)
         df = pd.read_csv(caminho, sep=";", encoding="utf-8")
 
-        # Validação do cabeçalho
+        # Validação de cabeçalho
         if list(df.columns) != CABECALHO_ESPERADO:
             raise ValueError(
                 f"Arquivo {arquivo} com cabeçalho inválido.\n"
@@ -48,7 +48,6 @@ def carregar_dados(pasta_relativa="data/extras"):
             .astype(float)
         )
 
-        # Garantir que Exercício seja string
         df["Exercício"] = df["Exercício"].astype(str)
 
         dfs.append(df)
