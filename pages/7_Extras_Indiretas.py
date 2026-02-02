@@ -1,10 +1,10 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+from pathlib import Path
 
 st.set_page_config(page_title="Repasses Extras", layout="wide")
-
-st.title("💰 Repasses Extras")
+st.title("💰 Repasses Extras – Indiretas")
 
 # -------------------------
 # CONSTANTES
@@ -14,21 +14,29 @@ MESES = [
     "JULHO", "AGOSTO", "SETEMBRO", "OUTUBRO", "NOVEMBRO", "DEZEMBRO"
 ]
 
+BASE_DIR = Path(__file__).parent.parent  # raiz do projeto
+DATA_DIR = BASE_DIR / "data"              # pasta onde ficam os CSVs
+
 # -------------------------
 # LEITURA DO CSV
 # -------------------------
 @st.cache_data
-def carregar_dados():
+def carregar_dados(exercicio: int):
+
+    caminho = DATA_DIR / f"extras_{exercicio}.csv"
+
+    if not caminho.exists():
+        st.error(f"Arquivo não encontrado: {caminho}")
+        st.stop()
+
     df = pd.read_csv(
-        "extras_2023.csv",  # ajuste se necessário
+        caminho,
         sep=";",
         encoding="utf-8"
     )
 
-    # padronização
     df.columns = df.columns.str.strip()
 
-    # conversões
     df["Exercício"] = df["Exercício"].astype(int)
 
     df["Repasse"] = (
@@ -47,52 +55,51 @@ def carregar_dados():
 
     return df
 
+# -------------------------
+# FILTRO EXERCÍCIO
+# -------------------------
+st.sidebar.header("🔎 Filtros")
 
-df = carregar_dados()
+exercicio = st.sidebar.selectbox(
+    "Exercício",
+    [2023, 2024]  # ajuste se tiver mais
+)
+
+df = carregar_dados(exercicio)
 
 # -------------------------
 # FILTROS
 # -------------------------
-st.sidebar.header("🔎 Filtros")
-
-exercicio_sel = st.sidebar.selectbox(
-    "Exercício",
-    sorted(df["Exercício"].unique())
-)
-
-df_f = df[df["Exercício"] == exercicio_sel]
-
 credor_sel = st.sidebar.multiselect(
     "Credor",
-    sorted(df_f["Credor"].unique()),
-    default=sorted(df_f["Credor"].unique())
+    sorted(df["Credor"].unique()),
+    default=sorted(df["Credor"].unique())
 )
-
-df_f = df_f[df_f["Credor"].isin(credor_sel)]
 
 fonte_sel = st.sidebar.multiselect(
     "Fonte",
-    sorted(df_f["Fonte"].unique()),
-    default=sorted(df_f["Fonte"].unique())
+    sorted(df["Fonte"].unique()),
+    default=sorted(df["Fonte"].unique())
 )
 
-df_f = df_f[df_f["Fonte"].isin(fonte_sel)]
+df_f = df[
+    (df["Credor"].isin(credor_sel)) &
+    (df["Fonte"].isin(fonte_sel))
+]
 
 # -------------------------
 # INDICADORES
 # -------------------------
 st.subheader("📊 Resumo")
 
-col1, col2 = st.columns(2)
+c1, c2 = st.columns(2)
 
-col1.metric(
-    "Total de Registros",
-    f"{len(df_f)}"
-)
+c1.metric("Registros", len(df_f))
 
-col2.metric(
+total = df_f["Repasse"].sum()
+c2.metric(
     "Total Repassado",
-    f"R$ {df_f['Repasse'].sum():,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+    f"R$ {total:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 )
 
 # -------------------------
@@ -124,8 +131,7 @@ fig = px.bar(
 fig.update_layout(
     height=520,
     yaxis_tickprefix="R$ ",
-    yaxis_tickformat=",.0f",
-    legend_title_text="Credor"
+    yaxis_tickformat=",.0f"
 )
 
 st.plotly_chart(fig, use_container_width=True)
@@ -135,14 +141,10 @@ st.plotly_chart(fig, use_container_width=True)
 # -------------------------
 st.subheader("📄 Detalhamento")
 
-df_tabela = df_f.sort_values(["Credor", "Competência"])
+df_tab = df_f.sort_values(["Credor", "Competência"]).copy()
 
-df_tabela["Repasse"] = df_tabela["Repasse"].map(
+df_tab["Repasse"] = df_tab["Repasse"].map(
     lambda x: f"R$ {x:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 )
 
-st.dataframe(
-    df_tabela,
-    use_container_width=True,
-    hide_index=True
-)
+st.dataframe(df_tab, use_container_width=True, hide_index=True)
