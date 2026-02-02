@@ -98,15 +98,17 @@ df_f = filtrar_extras(
 if df_f.empty:
     st.warning("Nenhum dado para os filtros selecionados.")
     st.stop()
+
 st.subheader("DEBUG — Valores reais")
 st.dataframe(
-    df[["Credor", "Mês", "Exercício", "Repasse"]]
+    df[["Credor", "Competência", "Exercício", "Repasse"]]
     .sort_values("Repasse", ascending=False)
     .head(20)
 )
 
 st.write("Máximo:", df["Repasse"].max())
 st.write("Mínimo:", df["Repasse"].min())
+
 
 # ==================================================
 # GRÁFICO
@@ -196,4 +198,5 @@ st.download_button(
 )
 
 st.caption("Repasse – Administração Indireta • Visão de Consulta")
+
 
