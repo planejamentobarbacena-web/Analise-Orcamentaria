@@ -54,18 +54,10 @@ st.subheader("🎯 Filtros")
 col1, col2 = st.columns(2)
 
 exercicios = sorted(df["Exercício"].unique())
-ex_sel = col1.multiselect(
-    "Exercício",
-    exercicios,
-    default=exercicios
-)
+ex_sel = col1.multiselect("Exercício", exercicios, default=exercicios)
 
 credores = sorted(df["Credor"].unique())
-credor_sel = col2.multiselect(
-    "Credor",
-    credores,
-    default=credores
-)
+credor_sel = col2.multiselect("Credor", credores, default=credores)
 
 col3, col4 = st.columns(2)
 
@@ -100,20 +92,20 @@ if df_f.empty:
     st.stop()
 
 # ==================================================
-# DEBUG (CONFIRMAÇÃO REAL DOS VALORES)
+# DEBUG (CONFIRMAÇÃO REAL)
 # ==================================================
 with st.expander("🧪 DEBUG — Valores reais (checagem)"):
     st.dataframe(
-        df[["Credor", "Competência", "Exercício", "Repasse"]]
+        df_f[["Credor", "Competência", "Exercício", "Repasse"]]
         .sort_values("Repasse", ascending=False)
         .head(20),
         use_container_width=True
     )
-    st.write("Máximo:", float_para_moeda(df["Repasse"].max()))
-    st.write("Mínimo:", float_para_moeda(df["Repasse"].min()))
+    st.write("Máximo:", float_para_moeda(df_f["Repasse"].max()))
+    st.write("Mínimo:", float_para_moeda(df_f["Repasse"].min()))
 
 # ==================================================
-# GRÁFICO (EM MILHÕES — CORRETO)
+# GRÁFICO — AGORA FUNCIONA
 # ==================================================
 st.markdown("---")
 st.subheader("📊 Evolução Mensal dos Repasses (R$ milhões)")
@@ -121,9 +113,21 @@ st.subheader("📊 Evolução Mensal dos Repasses (R$ milhões)")
 df_graf = (
     df_f
     .groupby(["Exercício", "Competência", "Credor"], as_index=False)
-    .agg({"Repasse": "sum"})
+    ["Repasse"]
+    .sum()
 )
 
+# 🔧 NORMALIZAÇÃO CRÍTICA
+df_graf["Competência"] = (
+    df_graf["Competência"]
+    .str.upper()
+    .str.strip()
+)
+
+# 🔥 MANTÉM SOMENTE MESES VÁLIDOS
+df_graf = df_graf[df_graf["Competência"].isin(MESES)]
+
+# ORDENAR DEPOIS DE LIMPAR
 df_graf["Competência"] = pd.Categorical(
     df_graf["Competência"],
     categories=MESES,
@@ -131,8 +135,6 @@ df_graf["Competência"] = pd.Categorical(
 )
 
 df_graf["Exercício"] = df_graf["Exercício"].astype(str)
-
-# 🔹 CONVERSÃO PARA MILHÕES (PONTO-CHAVE)
 df_graf["Repasse_mi"] = df_graf["Repasse"] / 1_000_000
 
 fig = px.bar(
@@ -147,9 +149,7 @@ fig = px.bar(
         "Repasse_mi": "Repasse (R$ milhões)",
         "Exercício": "Exercício"
     },
-    category_orders={
-        "Competência": MESES
-    },
+    category_orders={"Competência": MESES},
     height=520
 )
 
@@ -160,7 +160,7 @@ fig.for_each_annotation(
 st.plotly_chart(fig, use_container_width=True)
 
 # ==================================================
-# TABELA DETALHADA
+# TABELA
 # ==================================================
 st.markdown("---")
 st.subheader("📋 Detalhamento")
@@ -170,7 +170,7 @@ df_tabela["Exercício"] = df_tabela["Exercício"].astype(str)
 df_tabela["Repasse"] = df_tabela["Repasse"].apply(float_para_moeda)
 
 df_tabela["Competência"] = pd.Categorical(
-    df_tabela["Competência"],
+    df_tabela["Competência"].str.strip().str.upper(),
     categories=MESES,
     ordered=True
 )
@@ -179,25 +179,12 @@ df_tabela = df_tabela.sort_values(
     ["Exercício", "Competência", "Credor"]
 )
 
-st.dataframe(
-    df_tabela,
-    use_container_width=True,
-    hide_index=True
-)
+st.dataframe(df_tabela, use_container_width=True, hide_index=True)
 
 # ==================================================
-# DOWNLOAD
+# TOTAL ANUAL
 # ==================================================
-csv = df_tabela.to_csv(index=False, sep=";", encoding="utf-8")
-st.download_button(
-    "⬇️ Baixar CSV",
-    csv,
-    file_name="repasse_indireta.csv",
-    mime="text/csv"
-)
-
-st.caption("Repasse – Administração Indireta • Visão de Consulta")
-
+st.markdown("---")
 st.subheader("🧾 Total anual por Credor (conferência)")
 
 total_ano = (
@@ -209,5 +196,3 @@ total_ano = (
 total_ano["Repasse"] = total_ano["Repasse"].apply(float_para_moeda)
 
 st.dataframe(total_ano, use_container_width=True)
-
-
