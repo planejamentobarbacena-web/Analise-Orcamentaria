@@ -1,6 +1,6 @@
 import streamlit as st
 import plotly.express as px
-from utils import carregar_dados
+from utils1 import carregar_dados
 
 st.set_page_config(
     page_title="Consulta de Repasses",
@@ -84,3 +84,4 @@ try:
 except Exception as e:
     st.error("❌ Erro ao carregar os dados")
     st.exception(e)
+
