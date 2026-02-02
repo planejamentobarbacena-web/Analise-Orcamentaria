@@ -58,7 +58,7 @@ try:
         (dados["Fonte"].isin(fonte))
     ]
 
-    # Mostra tabela
+    # Mostrar tabela
     st.subheader("📋 Tabela")
     st.dataframe(filtrado, use_container_width=True)
 
@@ -66,15 +66,29 @@ try:
     st.write("🔍 Valores de Repasse (pré-visualização)")
     st.write(filtrado[["Competência", "Repasse"]])
 
+    # -----------------------------
     # Gráfico total por Competência
+    # -----------------------------
     st.subheader("📈 Total de Repasse por Competência")
-    agrupado = filtrado.groupby("Competência", as_index=False)["Repasse"].sum()
+
+    # Forçar Repasse como float
+    filtrado["Repasse"] = filtrado["Repasse"].astype(float)
+
+    # Agrupar e ordenar Competência
+    agrupado = filtrado.groupby("Competência", as_index=False).agg({"Repasse": "sum"})
+    # Ordenar corretamente, convertendo Competência para números
+    try:
+        agrupado["Competência_ordem"] = agrupado["Competência"].str.replace(r"[^\d]", "", regex=True).astype(int)
+        agrupado = agrupado.sort_values("Competência_ordem")
+    except:
+        agrupado = agrupado.sort_values("Competência")
 
     fig = px.bar(
         agrupado,
         x="Competência",
         y="Repasse",
-        text_auto=True
+        text=agrupado["Repasse"],
+        labels={"Repasse": "R$"}
     )
     st.plotly_chart(fig, use_container_width=True)
 
