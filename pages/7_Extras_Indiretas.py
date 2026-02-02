@@ -21,7 +21,7 @@ if st.session_state.get("perfil") not in ["administrador", "consulta"]:
     st.stop()
 
 # ==================================================
-# CONFIGURAÇÃO DA PÁGINA
+# CONFIGURAÇÃO
 # ==================================================
 st.set_page_config(
     page_title="Repasse – Indireta",
@@ -30,10 +30,10 @@ st.set_page_config(
 )
 
 st.title("🏛️ Repasse – Indireta")
-st.caption("Repasses à Administração Indireta (Saída por Despesa Extra)")
+st.caption("Repasses à Administração Indireta (Despesa Extra)")
 
 # ==================================================
-# CARGA DOS DADOS
+# CARGA
 # ==================================================
 df = carregar_extras()
 
@@ -56,40 +56,42 @@ credor_sel = col2.multiselect("Credor", credores, default=credores)
 
 col3, col4 = st.columns(2)
 
-comp_opcoes = ["Todos"] + MESES
-comp_sel = col3.multiselect("Competência", comp_opcoes, default=["Todos"])
+competencias_sel = col3.multiselect(
+    "Competência",
+    options=["Todos"] + MESES,
+    default=["Todos"]
+)
 
-fonte_opcoes = ["Todos"] + sorted(df["Fonte"].unique())
-fonte_sel = col4.multiselect("Fonte", fonte_opcoes, default=["Todos"])
+fontes_sel = col4.multiselect(
+    "Fonte",
+    options=["Todos"] + sorted(df["Fonte"].unique()),
+    default=["Todos"]
+)
 
 # ==================================================
-# FILTRAGEM
+# APLICA FILTROS
 # ==================================================
-competencias_filtrar = [c for c in comp_sel if c != "Todos"]
+competencias = [c for c in competencias_sel if c != "Todos"]
+fontes = None if "Todos" in fontes_sel else fontes_sel
 
 df_f = filtrar_extras(
     df,
     exercicios=ex_sel,
     credores=credor_sel,
-    competencias=competencias_filtrar
+    competencias=competencias,
+    fontes=fontes
 )
-
-if "Todos" not in fonte_sel:
-    df_f = df_f[df_f["Fonte"].isin(fonte_sel)]
-
-# 🔑 GARANTIA DE TIPO NUMÉRICO (CRÍTICO PARA O GRÁFICO)
-df_f["Repasse"] = pd.to_numeric(df_f["Repasse"], errors="coerce").fillna(0)
 
 # ==================================================
 # GRÁFICO
 # ==================================================
 st.markdown("---")
-st.subheader("📈 Evolução Mensal dos Repasses por Credor")
+st.subheader("📊 Evolução Mensal dos Repasses")
 
 df_graf = (
     df_f
-    .groupby(["Credor", "Competência", "Exercício"], as_index=False)
-    .agg({"Repasse": "sum"})
+    .groupby(["Exercício", "Competência", "Credor"], as_index=False)["Repasse"]
+    .sum()
 )
 
 df_graf["Competência"] = pd.Categorical(
@@ -107,30 +109,20 @@ fig = px.bar(
     color="Exercício",
     facet_col="Credor",
     barmode="group",
-    category_orders={
-        "Competência": MESES,
-        "Exercício": sorted(df_graf["Exercício"].unique())
-    },
     labels={
         "Competência": "Mês",
         "Repasse": "Valor (R$)",
-        "Exercício": "Ano"
+        "Exercício": "Exercício"
+    },
+    category_orders={
+        "Competência": MESES
     }
 )
 
 fig.update_layout(
     height=520,
-    bargap=0.30,
-    bargroupgap=0.08,
     yaxis_tickprefix="R$ ",
     yaxis_tickformat=",.0f",
-    legend=dict(
-        orientation="h",
-        yanchor="top",
-        y=-0.28,
-        xanchor="center",
-        x=0.5
-    ),
     legend_title_text="Exercício"
 )
 
@@ -144,7 +136,7 @@ st.plotly_chart(fig, use_container_width=True)
 # TABELA
 # ==================================================
 st.markdown("---")
-st.subheader("📋 Detalhamento dos Repasses")
+st.subheader("📋 Detalhamento")
 
 df_tabela = df_f.copy()
 df_tabela["Exercício"] = df_tabela["Exercício"].astype(str)
@@ -160,17 +152,11 @@ df_tabela = df_tabela.sort_values(
     ["Exercício", "Competência", "Credor"]
 )
 
-st.dataframe(
-    df_tabela,
-    use_container_width=True,
-    hide_index=True
-)
+st.dataframe(df_tabela, use_container_width=True, hide_index=True)
 
 # ==================================================
 # DOWNLOAD
 # ==================================================
-st.markdown("---")
-
 csv = df_tabela.to_csv(index=False, sep=";", encoding="utf-8")
 st.download_button(
     "⬇️ Baixar CSV",
