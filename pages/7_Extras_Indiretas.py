@@ -103,6 +103,9 @@ if "Todos" not in fonte_sel:
 
 # GARANTIA ABSOLUTA DE TIPO
 df_f["Repasse"] = pd.to_numeric(df_f["Repasse"], errors="coerce").fillna(0)
+st.write("LINHAS APÓS FILTRO:", len(df_f))
+st.write("SOMA DO REPASSE:", df_f["Repasse"].sum())
+st.write(df_f.head(10))
 
 # ==================================================
 # GRÁFICO
@@ -201,4 +204,5 @@ st.download_button(
 )
 
 st.caption("Repasse – Administração Indireta • Visão de Consulta")
+
 
