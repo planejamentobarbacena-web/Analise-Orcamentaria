@@ -144,8 +144,12 @@ st.download_button(
 st.markdown("---")
 st.subheader("📈 Evolução Mensal dos Repasses")
 
+# Criar cópia para o gráfico
 df_graf = df_f.copy()
+
+# Garantir tipos corretos
 df_graf["Exercício"] = df_graf["Exercício"].astype(str)
+df_graf["Repasse"] = pd.to_numeric(df_graf["Repasse"], errors="coerce").fillna(0)
 
 # Ordenar competências corretamente
 df_graf["Competência"] = pd.Categorical(
@@ -153,9 +157,6 @@ df_graf["Competência"] = pd.Categorical(
     categories=MESES,
     ordered=True
 )
-
-# Repasse como número
-df_graf["Repasse"] = df_graf["Repasse"].apply(float_para_moeda)
 
 # Gráfico de barras agrupadas
 fig = px.bar(
@@ -173,12 +174,13 @@ fig = px.bar(
     }
 )
 
-# Formatar todos os eixos Y corretamente
+# Formatar eixo Y como moeda (mantendo valores numéricos)
 for i in fig.layout:
     if "yaxis" in i:
         fig.layout[i].tickprefix = "R$ "
-        fig.layout[i].tickformat = ",.0f"
+        fig.layout[i].tickformat = ",.0f"  # separador de milhares, sem casas decimais
 
+# Layout geral
 fig.update_layout(
     height=520,
     legend=dict(
@@ -189,13 +191,15 @@ fig.update_layout(
     )
 )
 
-# Limpar texto das facetas
+# Limpar texto das facetas (mostrar apenas o nome do credor)
 fig.for_each_annotation(lambda a: a.update(text=a.text.split("=")[-1]))
 
+# Exibir gráfico no Streamlit
 st.plotly_chart(fig, use_container_width=True)
 
 
 st.caption("Repasse – Administração Indireta • Consulta")
+
 
 
 
