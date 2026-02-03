@@ -137,7 +137,6 @@ st.download_button(
     file_name="repasse_indireta.csv",
     mime="text/csv"
 )
-
 # ==================================================
 # GRÁFICO – Evolução Mensal (Barras)
 # ==================================================
@@ -149,7 +148,7 @@ df_graf = df_f.copy()
 
 # Garantir tipos corretos
 df_graf["Exercício"] = df_graf["Exercício"].astype(str)
-df_graf["Repasse"] = pd.to_numeric(df_graf["Repasse"], errors="coerce").fillna(0)
+df_graf["Repasse"] = pd.to_numeric(df_graf["Repasse"], errors="coerce").fillna(0)  # ⚠ float!
 
 # Ordenar competências corretamente
 df_graf["Competência"] = pd.Categorical(
@@ -162,7 +161,7 @@ df_graf["Competência"] = pd.Categorical(
 fig = px.bar(
     df_graf,
     x="Competência",
-    y="Repasse",
+    y="Repasse",      # ⚠ float, nunca string
     color="Exercício",
     barmode="group",
     facet_col="Credor",
@@ -180,7 +179,6 @@ for i in fig.layout:
         fig.layout[i].tickprefix = "R$ "
         fig.layout[i].tickformat = ",.0f"  # separador de milhares, sem casas decimais
 
-# Layout geral
 fig.update_layout(
     height=520,
     legend=dict(
@@ -194,11 +192,10 @@ fig.update_layout(
 # Limpar texto das facetas (mostrar apenas o nome do credor)
 fig.for_each_annotation(lambda a: a.update(text=a.text.split("=")[-1]))
 
-# Exibir gráfico no Streamlit
 st.plotly_chart(fig, use_container_width=True)
 
-
 st.caption("Repasse – Administração Indireta • Consulta")
+
 
 
 
