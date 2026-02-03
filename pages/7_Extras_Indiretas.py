@@ -143,12 +143,16 @@ st.download_button(
 st.markdown("---")
 st.subheader("📈 Evolução Mensal dos Repasses")
 
-# Criar cópia para o gráfico
-df_graf = df_f.copy()
+# Criar df agrupado por Competência, Credor e Exercício
+df_graf = (
+    df_f
+    .groupby(["Competência", "Credor", "Exercício"], as_index=False)
+    .agg({"Repasse": "sum"})
+)
 
 # Garantir tipos corretos
 df_graf["Exercício"] = df_graf["Exercício"].astype(str)
-df_graf["Repasse"] = pd.to_numeric(df_graf["Repasse"], errors="coerce").fillna(0)  # ⚠ float!
+df_graf["Repasse"] = pd.to_numeric(df_graf["Repasse"], errors="coerce").fillna(0)
 
 # Ordenar competências corretamente
 df_graf["Competência"] = pd.Categorical(
@@ -161,7 +165,7 @@ df_graf["Competência"] = pd.Categorical(
 fig = px.bar(
     df_graf,
     x="Competência",
-    y="Repasse",      # ⚠ float, nunca string
+    y="Repasse",      # ⚠ float
     color="Exercício",
     barmode="group",
     facet_col="Credor",
@@ -173,7 +177,7 @@ fig = px.bar(
     }
 )
 
-# Formatar eixo Y como moeda (mantendo valores numéricos)
+# Formatar eixo Y como moeda
 for i in fig.layout:
     if "yaxis" in i:
         fig.layout[i].tickprefix = "R$ "
@@ -189,12 +193,14 @@ fig.update_layout(
     )
 )
 
-# Limpar texto das facetas (mostrar apenas o nome do credor)
+# Limpar texto das facetas
 fig.for_each_annotation(lambda a: a.update(text=a.text.split("=")[-1]))
 
 st.plotly_chart(fig, use_container_width=True)
 
+
 st.caption("Repasse – Administração Indireta • Consulta")
+
 
 
 
