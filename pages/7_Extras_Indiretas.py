@@ -144,11 +144,9 @@ st.download_button(
 st.markdown("---")
 st.subheader("📈 Evolução Mensal dos Repasses")
 
-df_graf = (
-    df_f
-    .groupby(["Competência", "Credor", "Exercício"], as_index=False)
-    .agg({"Repasse": "sum"})
-)
+df_graf = df_f.copy()
+df_graf["Exercício"] = df_graf["Exercício"].astype(str)
+df_graf["Repasse"] = df_graf["Repasse"].apply(float_para_moeda)
 
 # Ordenar competências corretamente
 df_graf["Competência"] = pd.Categorical(
@@ -156,9 +154,7 @@ df_graf["Competência"] = pd.Categorical(
     categories=MESES,
     ordered=True
 )
-df_graf = df_f.copy()
-df_graf["Exercício"] = df_graf["Exercício"].astype(str)
-df_graf["Repasse"] = df_graf["Repasse"].apply(float_para_moeda)
+
 
 # Gráfico de barras agrupadas
 fig = px.bar(
@@ -194,6 +190,7 @@ fig.for_each_annotation(lambda a: a.update(text=a.text.split("=")[-1]))
 st.plotly_chart(fig, use_container_width=True)
 
 st.caption("Repasse – Administração Indireta • Consulta")
+
 
 
 
