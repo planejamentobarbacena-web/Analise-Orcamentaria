@@ -154,7 +154,7 @@ df_graf["Competência"] = pd.Categorical(
     ordered=True
 )
 
-# Garantir que Repasse é número
+# Repasse como número
 df_graf["Repasse"] = pd.to_numeric(df_graf["Repasse"], errors="coerce").fillna(0)
 
 # Gráfico de barras agrupadas
@@ -173,11 +173,14 @@ fig = px.bar(
     }
 )
 
-# Formatar eixo y como moeda
+# Formatar todos os eixos Y corretamente
+for i in fig.layout:
+    if "yaxis" in i:
+        fig.layout[i].tickprefix = "R$ "
+        fig.layout[i].tickformat = ",.0f"
+
 fig.update_layout(
     height=520,
-    yaxis_tickprefix="R$ ",
-    yaxis_tickformat=",.0f",  # mantém separador de milhares
     legend=dict(
         orientation="h",
         y=-0.25,
@@ -191,7 +194,9 @@ fig.for_each_annotation(lambda a: a.update(text=a.text.split("=")[-1]))
 
 st.plotly_chart(fig, use_container_width=True)
 
+
 st.caption("Repasse – Administração Indireta • Consulta")
+
 
 
 
