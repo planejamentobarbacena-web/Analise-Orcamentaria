@@ -139,7 +139,7 @@ st.download_button(
 )
 
 # ==================================================
-# GRÁFICO – Evolução Mensal
+# GRÁFICO – Evolução Mensal (Barras)
 # ==================================================
 st.markdown("---")
 st.subheader("📈 Evolução Mensal dos Repasses")
@@ -156,23 +156,21 @@ df_graf["Competência"] = pd.Categorical(
     categories=MESES,
     ordered=True
 )
-df_graf = df_f.copy()
 df_graf["Exercício"] = df_graf["Exercício"].astype(str)
-df_graf["Repasse"] = df_graf["Repasse"].apply(float_para_moeda)
 
-# Gráfico de linha para melhor visualização
-fig = px.line(
+# Gráfico de barras agrupadas
+fig = px.bar(
     df_graf,
     x="Competência",
     y="Repasse",
-    color="Credor",
-    line_dash="Exercício",
-    markers=True,
+    color="Exercício",
+    barmode="group",
+    facet_col="Credor",
     labels={
         "Competência": "Mês",
         "Repasse": "Valor (R$)",
-        "Credor": "Credor",
-        "Exercício": "Ano"
+        "Exercício": "Ano",
+        "Credor": "Credor"
     }
 )
 
@@ -188,8 +186,12 @@ fig.update_layout(
     )
 )
 
+# Limpar texto das facetas
+fig.for_each_annotation(lambda a: a.update(text=a.text.split("=")[-1]))
+
 st.plotly_chart(fig, use_container_width=True)
 
 st.caption("Repasse – Administração Indireta • Consulta")
+
 
 
