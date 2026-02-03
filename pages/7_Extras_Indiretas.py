@@ -184,12 +184,8 @@ fig.update_layout(
     )
 )
 
-# Limpar texto das facetas
-fig.for_each_annotation(lambda a: a.update(text=a.text.split("=")[-1]))
-
-st.plotly_chart(fig, use_container_width=True)
-
 st.caption("Repasse – Administração Indireta • Consulta")
+
 
 
 
