@@ -1,56 +1,186 @@
-# streamlit_app.py
 import streamlit as st
 import pandas as pd
 import plotly.express as px
 
-st.set_page_config(page_title="Repasses", layout="wide")
+from utils_extras import (
+    carregar_extras,
+    filtrar_extras,
+    float_para_moeda,
+    MESES
+)
 
-st.title("Análise de Repasses")
+# ==================================================
+# SEGURANÇA
+# ==================================================
+if "logado" not in st.session_state or not st.session_state.logado:
+    st.warning("🔒 Acesso negado.")
+    st.stop()
 
-# --- CARREGAR DADOS ---
-# Substitua pelo seu CSV ou planilha
-@st.cache_data
-def carregar_dados(caminho):
-    df = pd.read_csv(caminho)
-    # Garantir Repasse como float
-    df["Repasse"] = df["Repasse"].astype(str).str.replace(".", "", regex=False).str.replace(",", ".", regex=False).astype(float)
-    return df
+if st.session_state.get("perfil") not in ["administrador", "consulta"]:
+    st.error("🚫 Perfil sem permissão.")
+    st.stop()
 
-# Exemplo: CSV local
-dados = carregar_dados("repasses.csv")
+# ==================================================
+# CONFIGURAÇÃO DA PÁGINA
+# ==================================================
+st.set_page_config(
+    page_title="Repasse – Indireta",
+    page_icon="🏛️",
+    layout="wide"
+)
 
-# --- FILTROS ---
-exercicios = sorted(dados["Exercício"].unique())
-credor_options = sorted(dados["Credor"].unique())
+st.title("🏛️ Repasse – Indireta")
+st.caption("Repasses à Administração Indireta (Despesa Extra)")
 
-exercicio_selecionado = st.sidebar.multiselect("Selecione Exercício", exercicios, default=exercicios)
-credor_selecionado = st.sidebar.multiselect("Selecione Credor", credor_options, default=credor_options)
+# ==================================================
+# DADOS
+# ==================================================
+df = carregar_extras()
 
-filtrado = dados[(dados["Exercício"].isin(exercicio_selecionado)) & 
-                 (dados["Credor"].isin(credor_selecionado))]
+if df.empty:
+    st.info("Nenhum repasse cadastrado.")
+    st.stop()
 
-# --- AGRUPAR PARA GRÁFICO ---
-ordem_comp = ["JANEIRO","FEVEREIRO","MARÇO","ABRIL","MAIO","JUNHO",
-              "JULHO","AGOSTO","SETEMBRO","OUTUBRO","NOVEMBRO","DEZEMBRO"]
+# ==================================================
+# FILTROS (ORGANIZAÇÃO INVERTIDA)
+# ==================================================
+st.subheader("🎯 Filtros")
 
-filtrado["Competência"] = pd.Categorical(filtrado["Competência"], categories=ordem_comp, ordered=True)
+# 🔁 LINHA 1: Credor | Exercício
+col1, col2 = st.columns(2)
 
-agrupado = filtrado.groupby(["Exercício","Competência","Credor"], as_index=False).agg({"Repasse":"sum"})
-agrupado = agrupado.sort_values(["Exercício","Competência"])
+credores = sorted(df["Credor"].unique())
+credor_sel = col1.multiselect(
+    "Credor",
+    credores,
+    default=credores
+)
 
-# --- GRÁFICO ---
+exercicios = sorted(df["Exercício"].dropna().astype(int).unique())
+ex_sel = col2.multiselect(
+    "Exercício",
+    exercicios,
+    default=exercicios
+)
+
+# 🔁 LINHA 2: Competência | Fonte
+col3, col4 = st.columns(2)
+
+comp_opcoes = ["Todos"] + MESES
+comp_sel = col3.multiselect(
+    "Competência",
+    comp_opcoes,
+    default=["Todos"]
+)
+
+fonte_opcoes = ["Todos"] + sorted(df["Fonte"].unique())
+fonte_sel = col4.multiselect(
+    "Fonte",
+    fonte_opcoes,
+    default=["Todos"]
+)
+
+# ==================================================
+# FILTRAGEM
+# ==================================================
+competencias_filtrar = [c for c in comp_sel if c != "Todos"]
+
+df_f = filtrar_extras(
+    df,
+    exercicios=ex_sel,
+    credores=credor_sel,
+    competencias=competencias_filtrar
+)
+
+if "Todos" not in fonte_sel:
+    df_f = df_f[df_f["Fonte"].isin(fonte_sel)]
+
+# 🔒 BLINDAGEM FINAL DO REPASSE
+df_f["Repasse"] = pd.to_numeric(df_f["Repasse"], errors="coerce").fillna(0)
+
+# ==================================================
+# GRÁFICO
+# ==================================================
+st.markdown("---")
+st.subheader("📈 Evolução Mensal dos Repasses")
+
+df_graf = (
+    df_f
+    .groupby(["Credor", "Competência", "Exercício"], as_index=False)
+    .agg({"Repasse": "sum"})
+)
+
+df_graf["Competência"] = pd.Categorical(
+    df_graf["Competência"],
+    categories=MESES,
+    ordered=True
+)
+
+df_graf["Exercício"] = df_graf["Exercício"].astype(str)
+
 fig = px.bar(
-    agrupado,
+    df_graf,
     x="Competência",
     y="Repasse",
     color="Exercício",
-    text=agrupado["Repasse"],
+    facet_col="Credor",
     barmode="group",
-    hover_data=["Credor"]
+    labels={
+        "Competência": "Mês",
+        "Repasse": "Valor (R$)",
+        "Exercício": "Ano"
+    }
 )
-fig.update_layout(yaxis_title="Repasse (R$)", xaxis_title="Competência")
+
+fig.update_layout(
+    height=520,
+    yaxis_tickprefix="R$ ",
+    yaxis_tickformat=",.0f",
+    legend=dict(
+        orientation="h",
+        y=-0.25,
+        x=0.5,
+        xanchor="center"
+    )
+)
+
+fig.for_each_annotation(
+    lambda a: a.update(text=a.text.split("=")[-1])
+)
+
 st.plotly_chart(fig, use_container_width=True)
 
-# --- TABELA FILTRADA ---
-st.subheader("Tabela de Repasses")
-st.dataframe(filtrado.sort_values(["Exercício","Competência"]))
+# ==================================================
+# TABELA
+# ==================================================
+st.markdown("---")
+st.subheader("📋 Detalhamento")
+
+df_tabela = df_f.copy()
+df_tabela["Exercício"] = df_tabela["Exercício"].astype(str)
+df_tabela["Repasse"] = df_tabela["Repasse"].apply(float_para_moeda)
+
+df_tabela = df_tabela.sort_values(
+    ["Exercício", "Competência", "Credor"]
+)
+
+st.dataframe(
+    df_tabela,
+    use_container_width=True,
+    hide_index=True
+)
+
+# ==================================================
+# DOWNLOAD
+# ==================================================
+st.markdown("---")
+
+csv = df_tabela.to_csv(index=False, sep=";", encoding="utf-8")
+st.download_button(
+    "⬇️ Baixar CSV",
+    csv,
+    file_name="repasse_indireta.csv",
+    mime="text/csv"
+)
+
+st.caption("Repasse – Administração Indireta • Consulta")
