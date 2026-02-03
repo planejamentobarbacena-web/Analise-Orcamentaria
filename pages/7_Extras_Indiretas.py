@@ -146,7 +146,7 @@ st.subheader("📈 Evolução Mensal dos Repasses")
 
 df_graf = df_f.copy()
 df_graf["Exercício"] = df_graf["Exercício"].astype(str)
-df_graf["Repasse"] = pd.to_numeric(df_graf["Repasse"], errors="coerce").fillna(0)
+
 
 # Ordenar competências corretamente
 df_graf["Competência"] = pd.Categorical(
@@ -154,7 +154,7 @@ df_graf["Competência"] = pd.Categorical(
     categories=MESES,
     ordered=True
 )
-
+df_graf["Repasse"] = pd.to_numeric(df_graf["Repasse"], errors="coerce").fillna(0)
 
 # Gráfico de barras agrupadas
 fig = px.bar(
@@ -185,6 +185,7 @@ fig.update_layout(
 )
 
 st.caption("Repasse – Administração Indireta • Consulta")
+
 
 
 
