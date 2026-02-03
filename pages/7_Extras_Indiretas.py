@@ -147,13 +147,14 @@ st.subheader("📈 Evolução Mensal dos Repasses")
 df_graf = df_f.copy()
 df_graf["Exercício"] = df_graf["Exercício"].astype(str)
 
-
 # Ordenar competências corretamente
 df_graf["Competência"] = pd.Categorical(
     df_graf["Competência"],
     categories=MESES,
     ordered=True
 )
+
+# Garantir que Repasse é número
 df_graf["Repasse"] = pd.to_numeric(df_graf["Repasse"], errors="coerce").fillna(0)
 
 # Gráfico de barras agrupadas
@@ -172,10 +173,11 @@ fig = px.bar(
     }
 )
 
+# Formatar eixo y como moeda
 fig.update_layout(
     height=520,
     yaxis_tickprefix="R$ ",
-    yaxis_tickformat=",.0f",
+    yaxis_tickformat=",.0f",  # mantém separador de milhares
     legend=dict(
         orientation="h",
         y=-0.25,
@@ -184,7 +186,13 @@ fig.update_layout(
     )
 )
 
+# Limpar texto das facetas
+fig.for_each_annotation(lambda a: a.update(text=a.text.split("=")[-1]))
+
+st.plotly_chart(fig, use_container_width=True)
+
 st.caption("Repasse – Administração Indireta • Consulta")
+
 
 
 
