@@ -146,7 +146,7 @@ st.subheader("📈 Evolução Mensal dos Repasses")
 
 df_graf = (
     df_f
-    .groupby(["Credor", "Competência", "Exercício"], as_index=False)
+    .groupby(["Competência", "Credor", "Exercício"], as_index=False)
     .agg({"Repasse": "sum"})
 )
 
@@ -156,7 +156,9 @@ df_graf["Competência"] = pd.Categorical(
     categories=MESES,
     ordered=True
 )
+df_graf = df_f.copy()
 df_graf["Exercício"] = df_graf["Exercício"].astype(str)
+df_graf["Repasse"] = df_graf["Repasse"].apply(float_para_moeda)
 
 # Gráfico de linha para melhor visualização
 fig = px.line(
@@ -189,4 +191,5 @@ fig.update_layout(
 st.plotly_chart(fig, use_container_width=True)
 
 st.caption("Repasse – Administração Indireta • Consulta")
+
 
