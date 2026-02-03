@@ -155,7 +155,7 @@ df_graf["Competência"] = pd.Categorical(
 )
 
 # Repasse como número
-df_graf["Repasse"] = pd.to_numeric(df_graf["Repasse"], errors="coerce").fillna(0)
+df_graf["Repasse"] = df_graf["Repasse"].apply(float_para_moeda)
 
 # Gráfico de barras agrupadas
 fig = px.bar(
@@ -196,6 +196,7 @@ st.plotly_chart(fig, use_container_width=True)
 
 
 st.caption("Repasse – Administração Indireta • Consulta")
+
 
 
 
