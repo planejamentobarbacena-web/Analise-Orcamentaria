@@ -99,6 +99,46 @@ if "Todos" not in fonte_sel:
 df_f["Repasse"] = pd.to_numeric(df_f["Repasse"], errors="coerce").fillna(0)
 
 # ==================================================
+# TABELA DETALHADA
+# ==================================================
+st.markdown("---")
+st.subheader("📋 Detalhamento")
+
+df_tabela = df_f.copy()
+df_tabela["Exercício"] = df_tabela["Exercício"].astype(str)
+df_tabela["Repasse"] = df_tabela["Repasse"].apply(float_para_moeda)
+
+# Ordenar corretamente pela competência
+df_tabela["Competência"] = pd.Categorical(
+    df_tabela["Competência"],
+    categories=MESES,
+    ordered=True
+)
+
+df_tabela = df_tabela.sort_values(
+    ["Exercício", "Competência", "Credor"]
+)
+
+st.dataframe(
+    df_tabela,
+    use_container_width=True,
+    hide_index=True
+)
+
+# ==================================================
+# DOWNLOAD CSV
+# ==================================================
+st.markdown("---")
+
+csv = df_tabela.to_csv(index=False, sep=";", encoding="utf-8")
+st.download_button(
+    "⬇️ Baixar CSV",
+    csv,
+    file_name="repasse_indireta.csv",
+    mime="text/csv"
+)
+
+# ==================================================
 # GRÁFICO – Evolução Mensal
 # ==================================================
 st.markdown("---")
@@ -148,44 +188,5 @@ fig.update_layout(
 
 st.plotly_chart(fig, use_container_width=True)
 
-# ==================================================
-# TABELA DETALHADA
-# ==================================================
-st.markdown("---")
-st.subheader("📋 Detalhamento")
-
-df_tabela = df_f.copy()
-df_tabela["Exercício"] = df_tabela["Exercício"].astype(str)
-df_tabela["Repasse"] = df_tabela["Repasse"].apply(float_para_moeda)
-
-# Ordenar corretamente pela competência
-df_tabela["Competência"] = pd.Categorical(
-    df_tabela["Competência"],
-    categories=MESES,
-    ordered=True
-)
-
-df_tabela = df_tabela.sort_values(
-    ["Exercício", "Competência", "Credor"]
-)
-
-st.dataframe(
-    df_tabela,
-    use_container_width=True,
-    hide_index=True
-)
-
-# ==================================================
-# DOWNLOAD CSV
-# ==================================================
-st.markdown("---")
-
-csv = df_tabela.to_csv(index=False, sep=";", encoding="utf-8")
-st.download_button(
-    "⬇️ Baixar CSV",
-    csv,
-    file_name="repasse_indireta.csv",
-    mime="text/csv"
-)
-
 st.caption("Repasse – Administração Indireta • Consulta")
+
