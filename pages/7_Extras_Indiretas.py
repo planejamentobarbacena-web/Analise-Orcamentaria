@@ -42,7 +42,7 @@ if df.empty:
     st.stop()
 
 # ==================================================
-# FILTROS (ORGANIZAÇÃO INVERTIDA)
+# FILTROS
 # ==================================================
 st.subheader("🎯 Filtros")
 
@@ -99,7 +99,7 @@ if "Todos" not in fonte_sel:
 df_f["Repasse"] = pd.to_numeric(df_f["Repasse"], errors="coerce").fillna(0)
 
 # ==================================================
-# GRÁFICO
+# GRÁFICO – Evolução Mensal
 # ==================================================
 st.markdown("---")
 st.subheader("📈 Evolução Mensal dos Repasses")
@@ -110,24 +110,26 @@ df_graf = (
     .agg({"Repasse": "sum"})
 )
 
+# Ordenar competências corretamente
 df_graf["Competência"] = pd.Categorical(
     df_graf["Competência"],
     categories=MESES,
     ordered=True
 )
-
 df_graf["Exercício"] = df_graf["Exercício"].astype(str)
 
-fig = px.bar(
+# Gráfico de linha para melhor visualização
+fig = px.line(
     df_graf,
     x="Competência",
     y="Repasse",
-    color="Exercício",
-    facet_col="Credor",
-    barmode="group",
+    color="Credor",
+    line_dash="Exercício",
+    markers=True,
     labels={
         "Competência": "Mês",
         "Repasse": "Valor (R$)",
+        "Credor": "Credor",
         "Exercício": "Ano"
     }
 )
@@ -144,14 +146,10 @@ fig.update_layout(
     )
 )
 
-fig.for_each_annotation(
-    lambda a: a.update(text=a.text.split("=")[-1])
-)
-
 st.plotly_chart(fig, use_container_width=True)
 
 # ==================================================
-# TABELA
+# TABELA DETALHADA
 # ==================================================
 st.markdown("---")
 st.subheader("📋 Detalhamento")
@@ -159,6 +157,13 @@ st.subheader("📋 Detalhamento")
 df_tabela = df_f.copy()
 df_tabela["Exercício"] = df_tabela["Exercício"].astype(str)
 df_tabela["Repasse"] = df_tabela["Repasse"].apply(float_para_moeda)
+
+# Ordenar corretamente pela competência
+df_tabela["Competência"] = pd.Categorical(
+    df_tabela["Competência"],
+    categories=MESES,
+    ordered=True
+)
 
 df_tabela = df_tabela.sort_values(
     ["Exercício", "Competência", "Credor"]
@@ -171,7 +176,7 @@ st.dataframe(
 )
 
 # ==================================================
-# DOWNLOAD
+# DOWNLOAD CSV
 # ==================================================
 st.markdown("---")
 
