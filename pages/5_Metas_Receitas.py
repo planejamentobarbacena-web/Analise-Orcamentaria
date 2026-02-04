@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-import plotly.express as px
 import unicodedata
 
 from utils_metas import (
@@ -51,12 +50,11 @@ def normalizar_texto(txt):
     )
 
 # =====================================================
-# CARGA INICIAL (TODOS OS DADOS)
+# CARGA INICIAL
 # =====================================================
 exercicios = exercicios_metas()
 df_full = carregar_metas_multiplos_exercicios(exercicios)
 
-# coluna auxiliar para busca sem acento
 df_full["Especificacao_norm"] = df_full["Especificação"].apply(normalizar_texto)
 
 # =====================================================
@@ -64,9 +62,12 @@ df_full["Especificacao_norm"] = df_full["Especificação"].apply(normalizar_text
 # =====================================================
 st.subheader("🎯 Filtros")
 
-col1, col2, col3 = st.columns(3)
+# Linha 1
+col1, col2 = st.columns(2)
+# Linha 2
+col3, col4 = st.columns(2)
 
-# ---- Receita (PRIMEIRO)
+# ---- Receita
 receitas_norm = (
     df_full[["Especificação", "Especificacao_norm"]]
     .drop_duplicates()
@@ -82,14 +83,13 @@ receita_sel = col1.selectbox(
     ["Todas"] + list(mapa_receitas.keys())
 )
 
-# ---- Aplica filtro de Receita
 df = df_full.copy()
 
 if receita_sel != "Todas":
     chave = mapa_receitas[receita_sel]
     df = df[df["Especificacao_norm"] == chave]
 
-# ---- Exercício (DEPOIS da Receita)
+# ---- Exercício
 anos_disponiveis = sorted(df["Exercício"].unique())
 
 sel_exercicios = col2.multiselect(
@@ -108,6 +108,7 @@ ordem_meses = [
 ]
 
 competencias = ["Todas"] + ordem_meses
+
 comp_sel = col3.multiselect(
     "Competência",
     competencias,
@@ -117,8 +118,14 @@ comp_sel = col3.multiselect(
 if "Todas" not in comp_sel:
     df = df[df["Competência"].isin(comp_sel)]
 
+# ---- Previsto / Realizado
+tipo_valor = col4.selectbox(
+    "Tipo de Valor",
+    ["Ambos", "Previsto", "Realizado"]
+)
+
 # =====================================================
-# CONSOLIDAÇÃO FINAL
+# CONSOLIDAÇÃO
 # =====================================================
 df_base = (
     df
@@ -129,27 +136,27 @@ df_base = (
     .sum()
 )
 
-# ==================================================
+df_visao = df_base.copy()
+
+if tipo_valor == "Previsto":
+    df_visao["Realizado"] = 0
+
+elif tipo_valor == "Realizado":
+    df_visao["Previsto"] = 0
+
+# =====================================================
 # SUBTOTAL
-# ==================================================
+# =====================================================
 st.markdown("---")
 st.subheader("💰 Subtotal das Metas (filtros aplicados)")
 
-subtotal_previsto = df_base["Previsto"].sum()
-subtotal_realizado = df_base["Realizado"].sum()
+subtotal_previsto = df_visao["Previsto"].sum()
+subtotal_realizado = df_visao["Realizado"].sum()
 
-col1, col2 = st.columns(2)
+c1, c2 = st.columns(2)
 
-col1.metric(
-    "Previsto",
-    fmt_moeda(subtotal_previsto)
-)
-
-col2.metric(
-    "Realizado",
-    fmt_moeda(subtotal_realizado)
-)
-
+c1.metric("Previsto", fmt_moeda(subtotal_previsto))
+c2.metric("Realizado", fmt_moeda(subtotal_realizado))
 
 # =====================================================
 # TABELA
@@ -158,7 +165,7 @@ st.markdown("---")
 st.subheader("📋 Metas de Receita – Visão Tabular")
 
 tabela = (
-    df
+    df_visao
     .pivot_table(
         index=["Exercício", "Especificação"],
         columns="Competência",
@@ -198,7 +205,4 @@ st.download_button(
     mime="text/csv"
 )
 
-st.caption("Metas de Receita • Filtro inteligente por receita e exercício")
-
-
-
+st.caption("Metas de Receita • Filtros combináveis por receita, exercício e tipo de valor")
