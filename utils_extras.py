@@ -15,7 +15,7 @@ MESES = [
 COLUNAS = ["Exercício", "Competência", "Credor", "Fonte", "Repasse"]
 
 # ==================================================
-# FUNÇÕES AUXILIARES
+# FUNÇÕES DE FORMATAÇÃO
 # ==================================================
 def moeda_para_float(valor):
     if pd.isna(valor):
@@ -54,7 +54,7 @@ def carregar_extras():
     return pd.concat(dfs, ignore_index=True)
 
 # ==================================================
-# INSERIR UM NOVO REPASSE (POR EXERCÍCIO)
+# INSERIR UM NOVO REPASSE
 # ==================================================
 def inserir_repasse(exercicio, competencia, credor, fonte, repasse):
     arquivo = os.path.join(DATA_DIR, f"extras_{exercicio}.csv")
@@ -101,3 +101,13 @@ def filtrar_extras(df, exercicios=None, credores=None, competencias=None):
         df_f = df_f[df_f["Competência"].isin(competencias)]
 
     return df_f
+
+# ==================================================
+# AGREGAÇÕES (GRÁFICOS)
+# ==================================================
+def agregar_repasse_por_exercicio(df):
+    return (
+        df
+        .groupby("Exercício", as_index=False)
+        .agg({"Repasse": "sum"})
+    )
