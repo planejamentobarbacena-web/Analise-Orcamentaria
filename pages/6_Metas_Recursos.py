@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-import plotly.express as px
 
 from utils_metas import (
     exercicios_metas,
@@ -52,9 +51,12 @@ if df_full.empty:
 # =====================================================
 st.subheader("🎯 Filtros")
 
-col1, col2, col3 = st.columns(3)
+# Linha 1
+col1, col2 = st.columns(2)
+# Linha 2
+col3, col4 = st.columns(2)
 
-# ---- Fonte / Recurso (CÓDIGO)
+# ---- Fonte / Recurso (Código)
 mapa = (
     df_full[["Codigo", "Especificacao"]]
     .drop_duplicates()
@@ -103,6 +105,19 @@ comp_sel = col3.multiselect(
 if "Todas" not in comp_sel:
     df = df[df["Competência"].isin(comp_sel)]
 
+# ---- Tipo de Valor
+tipo_valor = col4.selectbox(
+    "Tipo de Valor",
+    ["Ambos", "Previsto", "Realizado"]
+)
+
+if tipo_valor == "Previsto":
+    colunas_valor = ["Previsto"]
+elif tipo_valor == "Realizado":
+    colunas_valor = ["Realizado"]
+else:
+    colunas_valor = ["Previsto", "Realizado"]
+
 # =====================================================
 # CONSOLIDAÇÃO
 # =====================================================
@@ -111,69 +126,20 @@ df_base = (
     .groupby(
         ["Exercício", "Codigo", "Especificacao", "Competência"],
         as_index=False
-    )[["Previsto", "Realizado"]]
+    )[colunas_valor]
     .sum()
 )
 
 # =====================================================
-# GRÁFICO
+# SUBTOTAL
 # =====================================================
 st.markdown("---")
-st.subheader("📈 Gráfico Comparativo")
+st.subheader("💰 Subtotal das Metas (filtros aplicados)")
 
-tipo_valor = st.multiselect(
-    "Tipo de Valor",
-    ["Previsto", "Realizado"],
-    default=["Previsto", "Realizado"]
-)
+cols = st.columns(len(colunas_valor))
 
-if recurso_sel == "Todos":
-    st.info("Selecione um recurso específico para visualizar o gráfico.")
-elif not tipo_valor:
-    st.warning("Selecione ao menos um tipo de valor.")
-else:
-    df_long = df_base.melt(
-        id_vars=["Exercício", "Competência"],
-        value_vars=["Previsto", "Realizado"],
-        var_name="Tipo",
-        value_name="Valor"
-    )
-
-    df_long = df_long[df_long["Tipo"].isin(tipo_valor)]
-
-    df_long["Serie"] = df_long["Tipo"] + " " + df_long["Exercício"].astype(str)
-
-    fig = px.bar(
-        df_long,
-        x="Competência",
-        y="Valor",
-        color="Serie",
-        barmode="group",
-        category_orders={"Competência": ordem_meses},
-        title=f"Comparativo Mensal – {recurso_sel}",
-        labels={
-            "Valor": "Valor (R$)",
-            "Competência": "Mês",
-            "Serie": ""
-        }
-    )
-
-    fig.update_traces(width=0.32)
-
-    fig.update_layout(
-        height=600,
-        yaxis_tickprefix="R$ ",
-        yaxis_tickformat=",.0f",
-        legend=dict(
-            orientation="h",
-            y=-0.25,
-            x=0.5,
-            xanchor="center"
-        ),
-        margin=dict(b=90)
-    )
-
-    st.plotly_chart(fig, use_container_width=True)
+for i, col in enumerate(colunas_valor):
+    cols[i].metric(col, fmt_moeda(df_base[col].sum()))
 
 # =====================================================
 # TABELA
@@ -182,11 +148,11 @@ st.markdown("---")
 st.subheader("📋 Metas por Fonte – Visão Tabular")
 
 tabela = (
-    df
+    df_base
     .pivot_table(
         index=["Exercício", "Codigo", "Especificacao"],
         columns="Competência",
-        values=["Previsto", "Realizado"],
+        values=colunas_valor,
         aggfunc="sum"
     )
 )
@@ -196,7 +162,7 @@ tabela = tabela.reset_index()
 
 colunas = ["Exercício", "Codigo", "Especificacao"]
 for mes in ordem_meses:
-    for tipo in ["Previsto", "Realizado"]:
+    for tipo in colunas_valor:
         col = f"{tipo} {mes}"
         if col in tabela.columns:
             colunas.append(col)
@@ -222,4 +188,4 @@ st.download_button(
     mime="text/csv"
 )
 
-st.caption("Metas por Fonte / Recurso • Estrutura oficial")
+st.caption("Metas por Fonte / Recurso • Visualização dinâmica por tipo de valor")
