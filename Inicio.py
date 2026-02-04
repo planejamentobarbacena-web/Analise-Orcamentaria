@@ -134,7 +134,8 @@ def card_modulo(titulo, descricao, pagina):
         st.markdown(f"### {titulo}")
         st.caption(descricao)
         if st.button("Acessar", key=chave, use_container_width=True):
-            st.switch_page(f"pages/{pagina}")
+            st.experimental_set_query_params(page=f"pages/{pagina}")
+            st.stop()
 
 # =====================================================
 # GRID DE CARDS
@@ -186,5 +187,6 @@ with col6:
         "Repasses às Administrações Indiretas",
         "7_Extras_Indiretas.py"
     )
+
 
 
