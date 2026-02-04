@@ -135,19 +135,23 @@ subtotal = df_f["Previsto", "Realizado"].sum()
 # SUBTOTAL
 # ==================================================
 st.markdown("---")
-st.subheader("💰 Subtotal dos Repasses (filtros aplicados)")
+st.subheader("💰 Subtotal das Metas (filtros aplicados)")
+
+subtotal_previsto = df_base["Previsto"].sum()
+subtotal_realizado = df_base["Realizado"].sum()
 
 col1, col2 = st.columns(2)
 
 col1.metric(
     "Previsto",
-    float_para_moeda(subtotal)
+    fmt_moeda(subtotal_previsto)
 )
 
 col2.metric(
     "Realizado",
-    f"{len(df_f):,}".replace(",", ".")
+    fmt_moeda(subtotal_realizado)
 )
+
 
 # =====================================================
 # TABELA
@@ -197,4 +201,5 @@ st.download_button(
 )
 
 st.caption("Metas de Receita • Filtro inteligente por receita e exercício")
+
 
