@@ -129,68 +129,25 @@ df_base = (
     .sum()
 )
 
-# =====================================================
-# GRÁFICO
-# =====================================================
-st.markdown("---")
-st.subheader("📈 Gráfico Comparativo")
+subtotal = df_f["Previsto", "Realizado"].sum()
 
-tipo_valor = st.multiselect(
-    "Tipo de Valor",
-    ["Previsto", "Realizado"],
-    default=["Previsto", "Realizado"]
+# ==================================================
+# SUBTOTAL
+# ==================================================
+st.markdown("---")
+st.subheader("💰 Subtotal dos Repasses (filtros aplicados)")
+
+col1, col2 = st.columns(2)
+
+col1.metric(
+    "Previsto",
+    float_para_moeda(subtotal)
 )
 
-if receita_sel == "Todas":
-    st.info("Selecione uma receita específica para visualizar o gráfico.")
-elif not tipo_valor:
-    st.warning("Selecione ao menos um tipo de valor.")
-else:
-    df_long = df_base.melt(
-        id_vars=["Exercício", "Competência"],
-        value_vars=["Previsto", "Realizado"],
-        var_name="Tipo",
-        value_name="Valor"
-    )
-
-    df_long = df_long[
-        (df_long["Tipo"].isin(tipo_valor)) &
-        (df_long["Valor"] > 0)
-    ]
-
-    df_long["Serie"] = df_long["Tipo"] + " " + df_long["Exercício"].astype(str)
-
-    fig = px.bar(
-        df_long,
-        x="Competência",
-        y="Valor",
-        color="Serie",
-        barmode="group",
-        category_orders={"Competência": ordem_meses},
-        title=f"Comparativo Mensal – {receita_sel}",
-        labels={
-            "Valor": "Valor (R$)",
-            "Competência": "Mês",
-            "Serie": ""
-        }
-    )
-
-    fig.update_traces(width=0.32)
-
-    fig.update_layout(
-        height=600,
-        yaxis_tickprefix="R$ ",
-        yaxis_tickformat=",.0f",
-        legend=dict(
-            orientation="h",
-            y=-0.25,
-            x=0.5,
-            xanchor="center"
-        ),
-        margin=dict(b=90)
-    )
-
-    st.plotly_chart(fig, use_container_width=True)
+col2.metric(
+    "Realizado",
+    f"{len(df_f):,}".replace(",", ".")
+)
 
 # =====================================================
 # TABELA
@@ -240,3 +197,4 @@ st.download_button(
 )
 
 st.caption("Metas de Receita • Filtro inteligente por receita e exercício")
+
