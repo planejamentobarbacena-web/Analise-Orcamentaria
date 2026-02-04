@@ -139,19 +139,27 @@ st.subheader("📊 Repasse por Exercício")
 
 df_grafico = agregar_repasse_por_exercicio(df_f)
 
-df_grafico["Repasse_fmt"] = df_grafico["Repasse"].apply(float_para_moeda)
+if df_grafico.empty:
+    st.info("Nenhum dado para exibir no gráfico com os filtros atuais.")
+else:
+    df_grafico["Repasse_fmt"] = df_grafico["Repasse"].apply(float_para_moeda)
 
-grafico = px.bar(
-    df_grafico,
-    x="Exercício",
-    y="Repasse",
-    text="Repasse_fmt",
-    labels={"Repasse": "Valor (R$)"},
-)
+    grafico = px.bar(
+        df_grafico,
+        x="Exercício",
+        y="Repasse",
+        text="Repasse_fmt",
+        labels={"Repasse": "Valor (R$)"},
+    )
 
-grafico.update_traces(textposition="outside")
-grafico.update_layout(yaxis_tickprefix="R$ ")
+    grafico.update_traces(textposition="outside")
+    grafico.update_layout(
+        yaxis_tickprefix="R$ ",
+        uniformtext_minsize=8,
+        uniformtext_mode="hide"
+    )
 
-st.plotly_chart(grafico, use_container_width=True)
+    st.plotly_chart(grafico, use_container_width=True)
 
 st.caption("Repasse – Administração Indireta • Consulta")
+
