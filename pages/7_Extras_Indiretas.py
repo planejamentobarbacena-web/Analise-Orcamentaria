@@ -170,7 +170,6 @@ fig = px.bar(
     barmode="group",
     facet_col="Credor",
     labels={
-        "Competência": "Mês",
         "Exercício": "Ano",
         "Repasse": "Valor R$",
         "Credor": "Credor"
@@ -194,6 +193,7 @@ fig.update_layout(
 )
 
 st.caption("Repasse – Administração Indireta • Consulta")
+
 
 
 
