@@ -129,8 +129,6 @@ df_base = (
     .sum()
 )
 
-subtotal = df_f["Previsto", "Realizado"].sum()
-
 # ==================================================
 # SUBTOTAL
 # ==================================================
@@ -201,5 +199,6 @@ st.download_button(
 )
 
 st.caption("Metas de Receita • Filtro inteligente por receita e exercício")
+
 
 
