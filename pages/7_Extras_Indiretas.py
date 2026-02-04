@@ -160,7 +160,6 @@ fig = px.bar(
     color="Exercício",
     facet_col="Credor",
     barmode="group",
-    text_auto=".2s",   # 🔹 valores nas barras
     labels={
         "Competência": "Mês",
         "Repasse": "Valor (R$)",
@@ -202,3 +201,4 @@ fig.add_annotation(
 st.plotly_chart(fig, use_container_width=True)
 
 st.caption("Repasse – Administração Indireta • Consulta")
+
