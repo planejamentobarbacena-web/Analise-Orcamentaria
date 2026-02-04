@@ -46,39 +46,21 @@ if df.empty:
 # ==================================================
 st.subheader("🎯 Filtros")
 
-# Linha 1: Credor | Exercício
 col1, col2 = st.columns(2)
 
 credores = sorted(df["Credor"].unique())
-credor_sel = col1.multiselect(
-    "Credor",
-    credores,
-    default=credores
-)
+credor_sel = col1.multiselect("Credor", credores, default=credores)
 
 exercicios = sorted(df["Exercício"].dropna().astype(int).unique())
-ex_sel = col2.multiselect(
-    "Exercício",
-    exercicios,
-    default=exercicios
-)
+ex_sel = col2.multiselect("Exercício", exercicios, default=exercicios)
 
-# Linha 2: Competência | Fonte
 col3, col4 = st.columns(2)
 
 comp_opcoes = ["Todos"] + MESES
-comp_sel = col3.multiselect(
-    "Competência",
-    comp_opcoes,
-    default=["Todos"]
-)
+comp_sel = col3.multiselect("Competência", comp_opcoes, default=["Todos"])
 
 fonte_opcoes = ["Todos"] + sorted(df["Fonte"].unique())
-fonte_sel = col4.multiselect(
-    "Fonte",
-    fonte_opcoes,
-    default=["Todos"]
-)
+fonte_sel = col4.multiselect("Fonte", fonte_opcoes, default=["Todos"])
 
 # ==================================================
 # FILTRAGEM
@@ -95,33 +77,21 @@ df_f = filtrar_extras(
 if "Todos" not in fonte_sel:
     df_f = df_f[df_f["Fonte"].isin(fonte_sel)]
 
-# Blindagem do campo Repasse
 df_f["Repasse"] = pd.to_numeric(df_f["Repasse"], errors="coerce").fillna(0)
 
 subtotal = df_f["Repasse"].sum()
 
 # ==================================================
-# SUBTOTAL (CONFORME FILTROS)
+# SUBTOTAL
 # ==================================================
 st.markdown("---")
 st.subheader("💰 Subtotal dos Repasses (filtros aplicados)")
 
-col1, col2, col3 = st.columns(3)
+c1, c2, c3 = st.columns(3)
 
-col1.metric(
-    "Valor Total",
-    float_para_moeda(subtotal)
-)
-
-col2.metric(
-    "Qtd. Registros",
-    f"{len(df_f):,}".replace(",", ".")
-)
-
-col3.metric(
-    "Credores",
-    df_f["Credor"].nunique()
-)
+c1.metric("Valor Total", float_para_moeda(subtotal))
+c2.metric("Qtd. Registros", f"{len(df_f):,}".replace(",", "."))
+c3.metric("Credores", df_f["Credor"].nunique())
 
 # ==================================================
 # TABELA
@@ -131,7 +101,6 @@ st.subheader("📋 Detalhamento")
 
 df_tabela = df_f.copy()
 
-# Ordem correta dos meses
 df_tabela["Competência"] = pd.Categorical(
     df_tabela["Competência"],
     categories=MESES,
@@ -165,7 +134,7 @@ st.download_button(
 )
 
 # ==================================================
-# GRÁFICO (NO FINAL)
+# GRÁFICO (NO FINAL – ALINHADO AO SUBTOTAL)
 # ==================================================
 st.markdown("---")
 st.subheader("📈 Evolução Mensal dos Repasses")
@@ -191,11 +160,16 @@ fig = px.bar(
     color="Exercício",
     facet_col="Credor",
     barmode="group",
+    text_auto=".2s",   # 🔹 valores nas barras
     labels={
         "Competência": "Mês",
         "Repasse": "Valor (R$)",
         "Exercício": "Ano"
     }
+)
+
+fig.update_traces(
+    textposition="outside"
 )
 
 fig.update_layout(
@@ -214,7 +188,17 @@ fig.for_each_annotation(
     lambda a: a.update(text=a.text.split("=")[-1])
 )
 
+# 🔹 Total do gráfico (igual ao subtotal)
+fig.add_annotation(
+    text=f"<b>Total:</b> {float_para_moeda(subtotal)}",
+    xref="paper",
+    yref="paper",
+    x=1,
+    y=1.15,
+    showarrow=False,
+    font=dict(size=14)
+)
+
 st.plotly_chart(fig, use_container_width=True)
 
 st.caption("Repasse – Administração Indireta • Consulta")
-
