@@ -87,9 +87,13 @@ subtotal = df_f["Repasse"].sum()
 st.markdown("---")
 st.subheader("💰 Subtotal dos Repasses")
 
-c1 = st.columns(1)
+c1 = st.columns(1)[0]
 
-c1.metric("Valor Total", float_para_moeda(subtotal))
+c1.metric(
+    "Valor Total",
+    float_para_moeda(subtotal)
+)
+
 
 # ==================================================
 # TABELA
@@ -132,6 +136,7 @@ st.download_button(
 )
 
 st.caption("Repasse – Administração Indireta • Consulta")
+
 
 
 
