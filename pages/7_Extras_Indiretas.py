@@ -134,8 +134,60 @@ st.download_button(
     file_name="repasse_indireta.csv",
     mime="text/csv"
 )
+# ==================================================
+# GRÁFICO – TOTAL MENSAL (ROBUSTO)
+# ==================================================
+st.markdown("---")
+st.subheader("📊 Total de Repasses por Mês")
+
+# Agrupamento simples e seguro
+df_graf = (
+    df_f
+    .groupby("Competência", as_index=False)
+    .agg({"Repasse": "sum"})
+)
+
+# Ordem correta dos meses
+df_graf["Competência"] = pd.Categorical(
+    df_graf["Competência"],
+    categories=MESES,
+    ordered=True
+)
+
+df_graf = df_graf.sort_values("Competência")
+
+fig = px.bar(
+    df_graf,
+    x="Competência",
+    y="Repasse",
+    labels={
+        "Competência": "Mês",
+        "Repasse": "Valor (R$)"
+    }
+)
+
+fig.update_layout(
+    height=420,
+    yaxis_tickprefix="R$ ",
+    yaxis_tickformat=",.2f",
+    showlegend=False
+)
+
+# Total geral (igual ao subtotal)
+fig.add_annotation(
+    text=f"<b>Total:</b> {float_para_moeda(subtotal)}",
+    xref="paper",
+    yref="paper",
+    x=1,
+    y=1.10,
+    showarrow=False,
+    font=dict(size=14)
+)
+
+st.plotly_chart(fig, use_container_width=True)
 
 st.caption("Repasse – Administração Indireta • Consulta")
+
 
 
 
