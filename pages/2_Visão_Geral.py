@@ -43,42 +43,63 @@ def fmt_moeda_br(valor):
 # =====================================================
 st.subheader("🎯 Filtros")
 
-# LINHA 1
-col1, col2 = st.columns(2)
-
+# -----------------------------------------------------
+# Exercício
+# -----------------------------------------------------
 exercicios = exercicios_disponiveis()
-sel_ex = col1.multiselect(
+
+sel_ex = st.multiselect(
     "Exercício",
     ["Todos"] + exercicios,
-    default=["Todos"]
+    default=["Todos"],
+    key="filtro_exercicio_execucao"
 )
 
 anos = exercicios if "Todos" in sel_ex else sel_ex
 
-df_base = carregar_despesas_multiplos_exercicios(
+df = carregar_despesas_multiplos_exercicios(
     anos,
     carregar_despesas
 )
 
-df = df_base.copy()
+# -----------------------------------------------------
+# Organograma
+# -----------------------------------------------------
+organogramas = ["Todos"] + sorted(df["Organograma"].dropna().unique())
 
-organogramas = ["Todos"] + sorted(df_base["Organograma"].dropna().unique())
-org_sel = col2.selectbox("Descrição do organograma", organogramas)
+org_sel = st.selectbox(
+    "Descrição do organograma",
+    organogramas,
+    key="filtro_org_execucao"
+)
 
 if org_sel != "Todos":
     df = df[df["Organograma"] == org_sel]
 
-# LINHA 2
-col3, col4 = st.columns(2)
+# -----------------------------------------------------
+# Subfunção
+# -----------------------------------------------------
+subfs = ["Todos"] + sorted(df["Subfunção"].dropna().unique())
 
-subfs = ["Todos"] + sorted(df_base["Subfunção"].dropna().unique())
-subf_sel = col3.selectbox("Descrição da subfunção", subfs)
+subf_sel = st.selectbox(
+    "Descrição da subfunção",
+    subfs,
+    key="filtro_subf_execucao"
+)
 
 if subf_sel != "Todos":
     df = df[df["Subfunção"] == subf_sel]
 
-recursos = ["Todos"] + sorted(df_base["Recurso"].dropna().unique())
-rec_sel = col4.selectbox("Recurso", recursos)
+# -----------------------------------------------------
+# Recurso
+# -----------------------------------------------------
+recursos = ["Todos"] + sorted(df["Recurso"].dropna().unique())
+
+rec_sel = st.selectbox(
+    "Recurso",
+    recursos,
+    key="filtro_recurso_execucao"
+)
 
 if rec_sel != "Todos":
     df = df[df["Recurso"] == rec_sel]
@@ -89,7 +110,8 @@ if rec_sel != "Todos":
 df_ag = (
     df.groupby("Exercício", as_index=False)[
         ["valor_orcado", "valor_atualizado", "valor_empenhado"]
-    ].sum()
+    ]
+    .sum()
 )
 
 # =====================================================
@@ -133,4 +155,5 @@ grafico = (
 )
 
 st.altair_chart(grafico, use_container_width=True)
+
 st.caption("Visão Geral • Execução Orçamentária Consolidada")
