@@ -164,15 +164,15 @@ df_graf["Competência"] = pd.Categorical(
 # Gráfico de barras agrupadas
 fig = px.bar(
     df_graf,
-    x="Competência",
-    y="Repasse",      # ⚠ float
-    color="Exercício",
+    x="Credor",
+    y="Repasse",    
+    color="Competência",
     barmode="group",
     facet_col="Credor",
     labels={
         "Competência": "Mês",
-        "Repasse": "Valor (R$)",
         "Exercício": "Ano",
+        "Repasse": "Valor (R$)",
         "Credor": "Credor"
     }
 )
@@ -200,6 +200,7 @@ st.plotly_chart(fig, use_container_width=True)
 
 
 st.caption("Repasse – Administração Indireta • Consulta")
+
 
 
 
