@@ -14,6 +14,9 @@ if st.session_state.get("perfil") not in ["administrador", "consulta"]:
     st.error("🚫 Perfil sem permissão.")
     st.stop()
 
+# =====================================================
+# CONFIGURAÇÃO
+# =====================================================
 st.set_page_config(
     page_title="Análise por Natureza",
     page_icon="📌",
@@ -26,72 +29,106 @@ st.header("📌 Análise Orçamentária por Natureza da Despesa")
 # FUNÇÃO MOEDA
 # =====================================================
 def fmt_moeda_br(valor):
+    if pd.isna(valor):
+        return "0,00"
     return f"{valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
 # =====================================================
 # FILTROS
 # =====================================================
 st.subheader("🎯 Filtros")
-col1, col2 = st.columns(2)
 
-# Exercício
+# -----------------------------------------------------
+# EXERCÍCIO (LIVRE)
+# -----------------------------------------------------
 exercicios = exercicios_disponiveis()
-sel = col1.multiselect(
+
+sel_ex = st.multiselect(
     "Exercício",
     ["Todos"] + exercicios,
-    default=["Todos"]
+    default=st.session_state.get("nat_exercicio", ["Todos"]),
+    key="nat_exercicio"
 )
 
-anos = exercicios if "Todos" in sel else sel
+anos = exercicios if "Todos" in sel_ex else sel_ex
 
 # =====================================================
 # CARGA DOS DADOS
 # =====================================================
 dfs = []
 for ano in anos:
-    df = carregar_despesas_por_natureza(ano)
-    df["Exercício"] = ano
-    dfs.append(df)
+    try:
+        df_ano = carregar_despesas_por_natureza(ano)
+        df_ano["Exercício"] = ano
+        dfs.append(df_ano)
+    except Exception:
+        pass
+
+if not dfs:
+    st.warning("Nenhum dado encontrado.")
+    st.stop()
 
 df = pd.concat(dfs, ignore_index=True)
 
 # =====================================================
-# FILTRO – ENTIDADE
+# FILTRO – ENTIDADE (LIVRE)
 # =====================================================
 entidades = ["Todos"] + sorted(df["Entidade"].dropna().unique())
-ent_sel = col2.selectbox("Entidade", entidades)
+
+valor_atual = st.session_state.get("nat_entidade", "Todos")
+if valor_atual not in entidades:
+    valor_atual = "Todos"
+
+ent_sel = st.selectbox(
+    "Entidade",
+    entidades,
+    index=entidades.index(valor_atual),
+    key="nat_entidade"
+)
 
 if ent_sel != "Todos":
     df = df[df["Entidade"] == ent_sel]
 
 # =====================================================
-# FILTRO – NATUREZA (CÓDIGO NORMALIZADO)
+# FILTRO – NATUREZA (LIVRE)
 # =====================================================
-naturezas_cod = ["Todos"] + sorted(df["Natureza_Normalizada"].dropna().unique())
+naturezas = ["Todos"] + sorted(df["Natureza_Normalizada"].dropna().unique())
+
+valor_atual = st.session_state.get("nat_natureza", ["Todos"])
+if not set(valor_atual).intersection(naturezas):
+    valor_atual = ["Todos"]
+
 nat_sel = st.multiselect(
     "Natureza da Despesa (Código)",
-    naturezas_cod,
-    default=["Todos"]
+    naturezas,
+    default=valor_atual,
+    key="nat_natureza"
 )
 
 if "Todos" not in nat_sel:
     df = df[df["Natureza_Normalizada"].isin(nat_sel)]
 
 # =====================================================
-# FILTRO – FONTE DE RECURSO
+# FILTRO – FONTE DE RECURSO (LIVRE)
 # =====================================================
 recursos = ["Todos"] + sorted(df["Recurso"].dropna().unique())
+
+valor_atual = st.session_state.get("nat_recurso", ["Todos"])
+if not set(valor_atual).intersection(recursos):
+    valor_atual = ["Todos"]
+
 rec_sel = st.multiselect(
     "Fonte de Recurso",
     recursos,
-    default=["Todos"]
+    default=valor_atual,
+    key="nat_recurso"
 )
 
 if "Todos" not in rec_sel:
     df = df[df["Recurso"].isin(rec_sel)]
 
 # =====================================================
-# AGREGAÇÃO FINAL (REGRA CORRETA)
+# AGREGAÇÃO FINAL
 # =====================================================
 chaves = [
     "Exercício",
@@ -102,12 +139,12 @@ chaves = [
 
 df_ag = (
     df
-    .groupby(chaves, as_index=False)
-    [["valor_orcado", "valor_atualizado", "valor_empenhado"]]
+    .groupby(chaves, as_index=False)[
+        ["valor_orcado", "valor_atualizado", "valor_empenhado"]
+    ]
     .sum()
 )
 
-# Recupera descrição apenas para exibição
 descricao = (
     df[["Natureza_Normalizada", "Descrição da Natureza"]]
     .drop_duplicates()
@@ -120,12 +157,12 @@ df_ag = df_ag.merge(
 )
 
 # =====================================================
-# GRÁFICO – VISÃO GERAL POR EXERCÍCIO
+# GRÁFICO
 # =====================================================
 st.markdown("---")
 st.subheader("📊 Comparativo Orçamentário por Exercício")
 
-df_grafico = (
+df_graf = (
     df_ag
     .groupby("Exercício", as_index=False)[
         ["valor_orcado", "valor_atualizado", "valor_empenhado"]
@@ -133,7 +170,7 @@ df_grafico = (
     .sum()
 )
 
-df_long = df_grafico.melt(
+df_long = df_graf.melt(
     id_vars="Exercício",
     value_vars=["valor_orcado", "valor_atualizado", "valor_empenhado"],
     var_name="Tipo",
@@ -146,27 +183,18 @@ df_long["Tipo"] = df_long["Tipo"].map({
     "valor_empenhado": "Empenhada"
 })
 
-ordem_tipo = ["Orçada", "Atualizada", "Empenhada"]
-df_long["Tipo"] = pd.Categorical(
-    df_long["Tipo"],
-    categories=ordem_tipo,
-    ordered=True
-)
-
+ordem = ["Orçada", "Atualizada", "Empenhada"]
+df_long["Tipo"] = pd.Categorical(df_long["Tipo"], categories=ordem, ordered=True)
 df_long["Valor_fmt"] = df_long["Valor"].apply(fmt_moeda_br)
 
 grafico = (
     alt.Chart(df_long)
-    .mark_bar(size=30)  # <<< CONTROLE DE LARGURA
+    .mark_bar(size=30)
     .encode(
-        x=alt.X(
-            "Exercício:N",
-            title="Exercício",
-            axis=alt.Axis(labelAngle=0)
-        ),
-        xOffset=alt.XOffset("Tipo:N", sort=ordem_tipo),
+        x=alt.X("Exercício:N", title="Exercício"),
+        xOffset=alt.XOffset("Tipo:N", sort=ordem),
         y=alt.Y("Valor:Q", title="Valor (R$)"),
-        color=alt.Color("Tipo:N", title="Despesa", sort=ordem_tipo),
+        color=alt.Color("Tipo:N", title="Despesa", sort=ordem),
         tooltip=[
             "Exercício:N",
             "Tipo:N",
@@ -212,7 +240,7 @@ st.dataframe(
 )
 
 # =====================================================
-# DOWNLOAD CSV
+# DOWNLOAD
 # =====================================================
 csv = tabela.to_csv(index=False, sep=";", encoding="utf-8")
 st.download_button(
