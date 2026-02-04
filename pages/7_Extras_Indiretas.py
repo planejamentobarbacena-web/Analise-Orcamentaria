@@ -137,57 +137,63 @@ st.download_button(
     file_name="repasse_indireta.csv",
     mime="text/csv"
 )
-# ==================================================
-# GRÁFICO – Total de Repasses (Barras)
-# ==================================================
+# =====================================================
+# GRÁFICO – VISÃO GERAL POR EXERCÍCIO
+# =====================================================
 st.markdown("---")
-st.subheader("📊 Total de Repasses")
+st.subheader("📊 Comparativo Orçamentário por Exercício")
 
-# Garantir que Repasse seja numérico
-df_f["Repasse"] = (
-    df_f["Repasse"]
-    .astype(str)
-    .str.replace("R$", "", regex=False)
-    .str.replace(".", "", regex=False)
-    .str.replace(",", ".", regex=False)
-    .astype(float)
+df_grafico = (
+    df_ag
+    .groupby("Exercício", as_index=False)[
+        ["valor_orcado", "valor_atualizado", "valor_empenhado"]
+    ]
+    .sum()
 )
 
-df_f["Exercício"] = df_f["Exercício"].astype(str)
-
-# Agrupar
-df_graf = (
-    df_f
-    .groupby("Exercício", as_index=False)
-    .agg({"Repasse": "sum"})
+df_long = df_grafico.melt(
+    id_vars="Exercício",
+    value_vars=["valor_orcado", "valor_atualizado", "valor_empenhado"],
+    var_name="Tipo",
+    value_name="Valor"
 )
 
-# Gráfico de barras
-fig = px.bar(
-    df_graf,
-    x="Exercício",
-    y="Repasse",
-    labels={
-        "Exercício": "Ano",
-        "Repasse": "Valor (R$)"
-    }
+df_long["Tipo"] = df_long["Tipo"].map({
+    "valor_orcado": "Orçada",
+    "valor_atualizado": "Atualizada",
+    "valor_empenhado": "Empenhada"
+})
+
+ordem_tipo = ["Orçada", "Atualizada", "Empenhada"]
+df_long["Tipo"] = pd.Categorical(
+    df_long["Tipo"],
+    categories=ordem_tipo,
+    ordered=True
 )
 
-# Formatar eixo Y como moeda
-fig.update_layout(
-    height=520,
-    yaxis_tickprefix="R$ ",
-    yaxis_tickformat=",.0f",
-    legend=dict(
-        orientation="h",
-        y=-0.25,
-        x=0.5,
-        xanchor="center"
+df_long["Valor_fmt"] = df_long["Valor"].apply(fmt_moeda_br)
+
+grafico = (
+    alt.Chart(df_long)
+    .mark_bar(size=30)  # <<< CONTROLE DE LARGURA
+    .encode(
+        x=alt.X(
+            "Exercício:N",
+            title="Exercício",
+            axis=alt.Axis(labelAngle=0)
+        ),
+        xOffset=alt.XOffset("Tipo:N", sort=ordem_tipo),
+        y=alt.Y("Valor:Q", title="Valor (R$)"),
+        color=alt.Color("Tipo:N", title="Despesa", sort=ordem_tipo),
+        tooltip=[
+            "Exercício:N",
+            "Tipo:N",
+            alt.Tooltip("Valor_fmt:N", title="Valor (R$)")
+        ]
     )
+    .properties(height=420)
 )
 
-st.plotly_chart(fig, use_container_width=True)
+st.altair_chart(grafico, use_container_width=True)
 
 st.caption("Repasse – Administração Indireta • Consulta")
-
-
