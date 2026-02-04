@@ -118,11 +118,18 @@ comp_sel = col3.multiselect(
 if "Todas" not in comp_sel:
     df = df[df["Competência"].isin(comp_sel)]
 
-# ---- Previsto / Realizado
+# ---- Tipo de Valor
 tipo_valor = col4.selectbox(
     "Tipo de Valor",
     ["Ambos", "Previsto", "Realizado"]
 )
+
+if tipo_valor == "Previsto":
+    colunas_valor = ["Previsto"]
+elif tipo_valor == "Realizado":
+    colunas_valor = ["Realizado"]
+else:
+    colunas_valor = ["Previsto", "Realizado"]
 
 # =====================================================
 # CONSOLIDAÇÃO
@@ -132,17 +139,9 @@ df_base = (
     .groupby(
         ["Exercício", "Especificação", "Competência"],
         as_index=False
-    )[["Previsto", "Realizado"]]
+    )[colunas_valor]
     .sum()
 )
-
-df_visao = df_base.copy()
-
-if tipo_valor == "Previsto":
-    df_visao["Realizado"] = 0
-
-elif tipo_valor == "Realizado":
-    df_visao["Previsto"] = 0
 
 # =====================================================
 # SUBTOTAL
@@ -150,13 +149,10 @@ elif tipo_valor == "Realizado":
 st.markdown("---")
 st.subheader("💰 Subtotal das Metas (filtros aplicados)")
 
-subtotal_previsto = df_visao["Previsto"].sum()
-subtotal_realizado = df_visao["Realizado"].sum()
+cols = st.columns(len(colunas_valor))
 
-c1, c2 = st.columns(2)
-
-c1.metric("Previsto", fmt_moeda(subtotal_previsto))
-c2.metric("Realizado", fmt_moeda(subtotal_realizado))
+for i, col in enumerate(colunas_valor):
+    cols[i].metric(col, fmt_moeda(df_base[col].sum()))
 
 # =====================================================
 # TABELA
@@ -165,11 +161,11 @@ st.markdown("---")
 st.subheader("📋 Metas de Receita – Visão Tabular")
 
 tabela = (
-    df_visao
+    df_base
     .pivot_table(
         index=["Exercício", "Especificação"],
         columns="Competência",
-        values=["Previsto", "Realizado"],
+        values=colunas_valor,
         aggfunc="sum"
     )
 )
@@ -179,7 +175,7 @@ tabela = tabela.reset_index()
 
 colunas_ordenadas = ["Exercício", "Especificação"]
 for mes in ordem_meses:
-    for tipo in ["Previsto", "Realizado"]:
+    for tipo in colunas_valor:
         col = f"{tipo} {mes}"
         if col in tabela.columns:
             colunas_ordenadas.append(col)
@@ -205,4 +201,4 @@ st.download_button(
     mime="text/csv"
 )
 
-st.caption("Metas de Receita • Filtros combináveis por receita, exercício e tipo de valor")
+st.caption("Metas de Receita • Visualização dinâmica por tipo de valor")
