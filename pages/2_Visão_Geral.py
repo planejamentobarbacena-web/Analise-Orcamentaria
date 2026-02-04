@@ -44,7 +44,7 @@ def fmt_moeda_br(valor):
 st.subheader("🎯 Filtros")
 
 # -----------------------------------------------------
-# Exercício
+# EXERCÍCIO
 # -----------------------------------------------------
 exercicios = exercicios_disponiveis()
 
@@ -52,7 +52,7 @@ sel_ex = st.multiselect(
     "Exercício",
     ["Todos"] + exercicios,
     default=["Todos"],
-    key="filtro_exercicio_execucao"
+    key="exec_exercicio"
 )
 
 anos = exercicios if "Todos" in sel_ex else sel_ex
@@ -63,42 +63,57 @@ df = carregar_despesas_multiplos_exercicios(
 )
 
 # -----------------------------------------------------
-# Organograma
+# ORGANOGRAMA (FILTRO LIVRE)
 # -----------------------------------------------------
 organogramas = ["Todos"] + sorted(df["Organograma"].dropna().unique())
+
+valor_atual = st.session_state.get("exec_org", "Todos")
+if valor_atual not in organogramas:
+    valor_atual = "Todos"
 
 org_sel = st.selectbox(
     "Descrição do organograma",
     organogramas,
-    key="filtro_org_execucao"
+    index=organogramas.index(valor_atual),
+    key="exec_org"
 )
 
 if org_sel != "Todos":
     df = df[df["Organograma"] == org_sel]
 
 # -----------------------------------------------------
-# Subfunção
+# SUBFUNÇÃO (FILTRO LIVRE)
 # -----------------------------------------------------
-subfs = ["Todos"] + sorted(df["Subfunção"].dropna().unique())
+subfuncoes = ["Todos"] + sorted(df["Subfunção"].dropna().unique())
+
+valor_atual = st.session_state.get("exec_subf", "Todos")
+if valor_atual not in subfuncoes:
+    valor_atual = "Todos"
 
 subf_sel = st.selectbox(
     "Descrição da subfunção",
-    subfs,
-    key="filtro_subf_execucao"
+    subfuncoes,
+    index=subfuncoes.index(valor_atual),
+    key="exec_subf"
 )
 
 if subf_sel != "Todos":
     df = df[df["Subfunção"] == subf_sel]
 
 # -----------------------------------------------------
-# Recurso
+# RECURSO (FILTRO REALMENTE LIVRE)
 # -----------------------------------------------------
 recursos = ["Todos"] + sorted(df["Recurso"].dropna().unique())
+
+valor_atual = st.session_state.get("exec_recurso", "Todos")
+if valor_atual not in recursos:
+    valor_atual = "Todos"
 
 rec_sel = st.selectbox(
     "Recurso",
     recursos,
-    key="filtro_recurso_execucao"
+    index=recursos.index(valor_atual),
+    key="exec_recurso"
 )
 
 if rec_sel != "Todos":
