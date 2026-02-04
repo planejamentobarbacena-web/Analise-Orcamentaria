@@ -6,10 +6,10 @@ import os
 # NAVEGAÇÃO VIA QUERY PARAM (CARDS)
 # =====================================================
 params = st.experimental_get_query_params()
-if "page" in params:
-    destino = params["page"][0]
+if "pages" in params:
+    destino = params["pages"][0]
     st.experimental_set_query_params()  # limpa URL
-    st.switch_page(destino)
+    st.switch_pages(destino)
 
 # =====================================================
 # CONFIGURAÇÃO GERAL
@@ -191,3 +191,4 @@ with col6:
         "Repasses às Administrações Indiretas",
         "7_Extras_Indiretas.py"
     )
+
