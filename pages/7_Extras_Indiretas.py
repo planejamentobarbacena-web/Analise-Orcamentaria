@@ -146,7 +146,7 @@ st.subheader("📈 Evolução Mensal dos Repasses")
 # Criar df agrupado por Competência, Credor e Exercício
 df_graf = (
     df_f
-    .groupby(["Competência", "Credor", "Exercício"], as_index=False)
+    .groupby(["Repasse", "Credor", "Exercício"], as_index=False)
     .agg({"Repasse": "sum"})
 )
 
@@ -172,7 +172,7 @@ fig = px.bar(
     labels={
         "Competência": "Mês",
         "Exercício": "Ano",
-        "Repasse": "Repasse",
+        "Repasse": "Valor R$",
         "Credor": "Credor"
     }
 )
@@ -194,6 +194,7 @@ fig.update_layout(
 )
 
 st.caption("Repasse – Administração Indireta • Consulta")
+
 
 
 
