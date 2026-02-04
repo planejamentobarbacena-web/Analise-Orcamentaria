@@ -98,6 +98,31 @@ if "Todos" not in fonte_sel:
 # Blindagem do campo Repasse
 df_f["Repasse"] = pd.to_numeric(df_f["Repasse"], errors="coerce").fillna(0)
 
+subtotal = df_f["Repasse"].sum()
+
+# ==================================================
+# SUBTOTAL (CONFORME FILTROS)
+# ==================================================
+st.markdown("---")
+st.subheader("💰 Subtotal dos Repasses (filtros aplicados)")
+
+col1, col2, col3 = st.columns(3)
+
+col1.metric(
+    "Valor Total",
+    float_para_moeda(subtotal)
+)
+
+col2.metric(
+    "Qtd. Registros",
+    f"{len(df_f):,}".replace(",", ".")
+)
+
+col3.metric(
+    "Credores",
+    df_f["Credor"].nunique()
+)
+
 # ==================================================
 # TABELA
 # ==================================================
@@ -192,3 +217,4 @@ fig.for_each_annotation(
 st.plotly_chart(fig, use_container_width=True)
 
 st.caption("Repasse – Administração Indireta • Consulta")
+
