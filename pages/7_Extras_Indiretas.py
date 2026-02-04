@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-import plotly.express as px
 
 from utils_extras import (
     carregar_extras,
@@ -8,6 +7,17 @@ from utils_extras import (
     float_para_moeda,
     agregar_repasse_por_exercicio,
     MESES
+)
+
+from utils_graficos import grafico_barra_exercicio
+
+# ==================================================
+# CONFIGURAÇÃO DA PÁGINA (TEM QUE SER PRIMEIRO)
+# ==================================================
+st.set_page_config(
+    page_title="Repasse – Indireta",
+    page_icon="🏛️",
+    layout="wide"
 )
 
 # ==================================================
@@ -22,14 +32,8 @@ if st.session_state.get("perfil") not in ["administrador", "consulta"]:
     st.stop()
 
 # ==================================================
-# CONFIGURAÇÃO DA PÁGINA
+# TÍTULO
 # ==================================================
-st.set_page_config(
-    page_title="Repasse – Indireta",
-    page_icon="🏛️",
-    layout="wide"
-)
-
 st.title("🏛️ Repasse – Indireta")
 st.caption("Repasses à Administração Indireta (Despesa Extra)")
 
@@ -132,34 +136,27 @@ st.download_button(
 )
 
 # ==================================================
-# GRÁFICO
+# GRÁFICO (USANDO UTILS_GRAFICOS)
 # ==================================================
 st.markdown("---")
 st.subheader("📊 Repasse por Exercício")
 
 df_grafico = agregar_repasse_por_exercicio(df_f)
 
-if df_grafico.empty:
-    st.info("Nenhum dado para exibir no gráfico com os filtros atuais.")
+df_grafico["Repasse_fmt"] = df_grafico["Repasse"].apply(float_para_moeda)
+
+fig = grafico_barra_exercicio(
+    df_grafico,
+    coluna_exercicio="Exercício",
+    coluna_valor="Repasse",
+    coluna_texto="Repasse_fmt",
+    titulo="Repasse por Exercício",
+    label_valor="Valor (R$)"
+)
+
+if fig:
+    st.plotly_chart(fig, use_container_width=True)
 else:
-    df_grafico["Repasse_fmt"] = df_grafico["Repasse"].apply(float_para_moeda)
-
-    grafico = px.bar(
-        df_grafico,
-        x="Exercício",
-        y="Repasse",
-        text="Repasse_fmt",
-        labels={"Repasse": "Valor (R$)"},
-    )
-
-    grafico.update_traces(textposition="outside")
-    grafico.update_layout(
-        yaxis_tickprefix="R$ ",
-        uniformtext_minsize=8,
-        uniformtext_mode="hide"
-    )
-
-    st.plotly_chart(grafico, use_container_width=True)
+    st.info("Nenhum dado para exibir no gráfico com os filtros atuais.")
 
 st.caption("Repasse – Administração Indireta • Consulta")
-
