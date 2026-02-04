@@ -1,12 +1,12 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-import altair as alt
 
 from utils_extras import (
     carregar_extras,
     filtrar_extras,
     float_para_moeda,
+    agregar_repasse_por_exercicio,
     MESES
 )
 
@@ -47,42 +47,36 @@ if df.empty:
 # ==================================================
 st.subheader("🎯 Filtros")
 
-# 🔁 LINHA 1: Credor | Exercício
 col1, col2 = st.columns(2)
 
-credores = sorted(df["Credor"].unique())
 credor_sel = col1.multiselect(
     "Credor",
-    credores,
-    default=credores
+    sorted(df["Credor"].unique()),
+    default=sorted(df["Credor"].unique())
 )
 
-exercicios = sorted(df["Exercício"].dropna().astype(int).unique())
 ex_sel = col2.multiselect(
     "Exercício",
-    exercicios,
-    default=exercicios
+    sorted(df["Exercício"].unique()),
+    default=sorted(df["Exercício"].unique())
 )
 
-# 🔁 LINHA 2: Competência | Fonte
 col3, col4 = st.columns(2)
 
-comp_opcoes = ["Todos"] + MESES
 comp_sel = col3.multiselect(
     "Competência",
-    comp_opcoes,
+    ["Todos"] + MESES,
     default=["Todos"]
 )
 
-fonte_opcoes = ["Todos"] + sorted(df["Fonte"].unique())
 fonte_sel = col4.multiselect(
     "Fonte",
-    fonte_opcoes,
+    ["Todos"] + sorted(df["Fonte"].unique()),
     default=["Todos"]
 )
 
 # ==================================================
-# FILTRAGEM
+# APLICA FILTROS
 # ==================================================
 competencias_filtrar = [c for c in comp_sel if c != "Todos"]
 
@@ -96,11 +90,10 @@ df_f = filtrar_extras(
 if "Todos" not in fonte_sel:
     df_f = df_f[df_f["Fonte"].isin(fonte_sel)]
 
-# 🔒 BLINDAGEM FINAL DO REPASSE
 df_f["Repasse"] = pd.to_numeric(df_f["Repasse"], errors="coerce").fillna(0)
 
 # ==================================================
-# TABELA DETALHADA
+# TABELA
 # ==================================================
 st.markdown("---")
 st.subheader("📋 Detalhamento")
@@ -109,7 +102,6 @@ df_tabela = df_f.copy()
 df_tabela["Exercício"] = df_tabela["Exercício"].astype(str)
 df_tabela["Repasse"] = df_tabela["Repasse"].apply(float_para_moeda)
 
-# Ordenar corretamente pela competência
 df_tabela["Competência"] = pd.Categorical(
     df_tabela["Competência"],
     categories=MESES,
@@ -127,7 +119,7 @@ st.dataframe(
 )
 
 # ==================================================
-# DOWNLOAD CSV
+# DOWNLOAD
 # ==================================================
 st.markdown("---")
 
@@ -138,57 +130,28 @@ st.download_button(
     file_name="repasse_indireta.csv",
     mime="text/csv"
 )
-# =====================================================
-# GRÁFICO – VISÃO GERAL POR EXERCÍCIO
-# =====================================================
+
+# ==================================================
+# GRÁFICO
+# ==================================================
 st.markdown("---")
-st.subheader("📊 Comparativo Orçamentário por Exercício")
+st.subheader("📊 Repasse por Exercício")
 
-df_grafico = (
-    df_ag
-    .groupby("Exercício", as_index=False)
+df_grafico = agregar_repasse_por_exercicio(df_f)
+
+df_grafico["Repasse_fmt"] = df_grafico["Repasse"].apply(float_para_moeda)
+
+grafico = px.bar(
+    df_grafico,
+    x="Exercício",
+    y="Repasse",
+    text="Repasse_fmt",
+    labels={"Repasse": "Valor (R$)"},
 )
 
-df_long = df_grafico.melt(
-    id_vars="Exercício",
-    value_vars=["Repasse"],
-    var_name="Tipo",
-    value_name="Valor"
-)
+grafico.update_traces(textposition="outside")
+grafico.update_layout(yaxis_tickprefix="R$ ")
 
-
-ordem_tipo = ["Competência", "Credor", "Exercício"]
-df_long["Tipo"] = pd.Categorical(
-    df_long["Tipo"],
-    categories=ordem_tipo,
-    ordered=True
-)
-
-df_long["Valor_fmt"] = df_long["Valor"].apply(fmt_moeda_br)
-
-grafico = (
-    alt.Chart(df_long)
-    .mark_bar(size=30)  # <<< CONTROLE DE LARGURA
-    .encode(
-        x=alt.X(
-            "Exercício:N",
-            title="Exercício",
-            axis=alt.Axis(labelAngle=0)
-        ),
-        xOffset=alt.XOffset("Tipo:N", sort=ordem_tipo),
-        y=alt.Y("Valor:Q", title="Valor (R$)"),
-        color=alt.Color("Tipo:N", title="Despesa", sort=ordem_tipo),
-        tooltip=[
-            "Exercício:N",
-            "Tipo:N",
-            alt.Tooltip("Valor_fmt:N", title="Valor (R$)")
-        ]
-    )
-    .properties(height=420)
-)
-
-st.altair_chart(grafico, use_container_width=True)
+st.plotly_chart(grafico, use_container_width=True)
 
 st.caption("Repasse – Administração Indireta • Consulta")
-
-
