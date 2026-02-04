@@ -143,44 +143,45 @@ st.download_button(
 st.markdown("---")
 st.subheader("📈 Evolução Mensal dos Repasses")
 
-# Criar df agrupado por Competência, Credor e Exercício
+# AGRUPAR CORRETAMENTE
 df_graf = (
     df_f
-    .groupby(["Repasse", "Credor", "Exercício"], as_index=False)
+    .groupby(["Competência", "Credor", "Exercício"], as_index=False)
     .agg({"Repasse": "sum"})
 )
 
-# Garantir tipos corretos
+# Tipos corretos
 df_graf["Exercício"] = df_graf["Exercício"].astype(str)
-df_graf["Repasse"] = df_graf["Repasse"].apply(float_para_moeda)
+df_graf["Repasse"] = pd.to_numeric(df_graf["Repasse"], errors="coerce").fillna(0)
 
-# Ordenar competências corretamente
+# Ordem correta dos meses
 df_graf["Competência"] = pd.Categorical(
     df_graf["Competência"],
     categories=MESES,
     ordered=True
 )
 
-# Gráfico de barras agrupadas
+# GRÁFICO DE BARRAS
 fig = px.bar(
     df_graf,
-    x="Credor",
-    y="Repasse",    
-    color="Competência",
+    x="Competência",
+    y="Repasse",
+    color="Exercício",
     barmode="group",
     facet_col="Credor",
     labels={
+        "Competência": "Mês",
+        "Repasse": "Valor (R$)",
         "Exercício": "Ano",
-        "Repasse": "Valor R$",
         "Credor": "Credor"
     }
 )
 
-# Formatar eixo Y como moeda
-for i in fig.layout:
-    if "yaxis" in i:
-        fig.layout[i].tickprefix = "R$ "
-        fig.layout[i].tickformat = ",.0f"  # separador de milhares, sem casas decimais
+# Formatar eixo Y como moeda (sem virar string!)
+for axis in fig.layout:
+    if axis.startswith("yaxis"):
+        fig.layout[axis].tickprefix = "R$ "
+        fig.layout[axis].tickformat = ",.0f"
 
 fig.update_layout(
     height=520,
@@ -192,24 +193,9 @@ fig.update_layout(
     )
 )
 
+# Limpar título das facetas
+fig.for_each_annotation(lambda a: a.update(text=a.text.split("=")[-1]))
+
+st.plotly_chart(fig, use_container_width=True)
+
 st.caption("Repasse – Administração Indireta • Consulta")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
