@@ -4,23 +4,26 @@ import pandas as pd
 # ==================================================
 # CONFIGURAÇÃO
 # ==================================================
-DATA_DIR = "data/extras"
-os.makedirs(DATA_DIR, exist_ok=True)
+DATA_DIR = "data"
+ARQUIVO_EXTRAS = os.path.join(DATA_DIR, "extras_repasses.csv")
 
 MESES = [
     "JANEIRO", "FEVEREIRO", "MARÇO", "ABRIL", "MAIO", "JUNHO",
     "JULHO", "AGOSTO", "SETEMBRO", "OUTUBRO", "NOVEMBRO", "DEZEMBRO"
 ]
 
-COLUNAS = ["Exercício", "Competência", "Credor", "Fonte", "Repasse"]
-
 # ==================================================
-# FUNÇÕES DE FORMATAÇÃO
+# FUNÇÕES AUXILIARES
 # ==================================================
 def moeda_para_float(valor):
+    """
+    Converte 'R$ 1.234.567,89' ou '1.234.567,89' para float
+    """
     if pd.isna(valor):
         return 0.0
-    valor = str(valor).replace("R$", "").strip()
+
+    valor = str(valor)
+    valor = valor.replace("R$", "").strip()
     valor = valor.replace(".", "").replace(",", ".")
     return float(valor) if valor else 0.0
 
@@ -29,41 +32,40 @@ def float_para_moeda(valor):
     return f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
 # ==================================================
-# CARREGAR TODOS OS EXTRAS
+# CARREGAR EXTRAS
 # ==================================================
 def carregar_extras():
-    dfs = []
+    if not os.path.exists(ARQUIVO_EXTRAS):
+        colunas = ["Exercício", "Competência", "Credor", "Fonte", "Repasse"]
+        return pd.DataFrame(columns=colunas)
 
-    if not os.path.exists(DATA_DIR):
-        return pd.DataFrame(columns=COLUNAS)
+    df = pd.read_csv(ARQUIVO_EXTRAS, sep=";", dtype=str)
 
-    for arq in os.listdir(DATA_DIR):
-        if arq.startswith("extras_") and arq.endswith(".csv"):
-            caminho = os.path.join(DATA_DIR, arq)
-            df = pd.read_csv(caminho, sep=";", dtype=str)
+    df["Exercício"] = df["Exercício"].astype(int)
+    df["Competência"] = df["Competência"].str.upper()
+    df["Repasse"] = df["Repasse"].apply(moeda_para_float)
 
-            df["Exercício"] = df["Exercício"].astype(int)
-            df["Competência"] = df["Competência"].str.upper()
-            df["Repasse"] = df["Repasse"].apply(moeda_para_float)
+    return df
 
-            dfs.append(df)
+# ==================================================
+# SALVAR EXTRAS
+# ==================================================
+def salvar_extras(df):
+    df_save = df.copy()
+    df_save["Repasse"] = df_save["Repasse"].apply(float_para_moeda)
 
-    if not dfs:
-        return pd.DataFrame(columns=COLUNAS)
-
-    return pd.concat(dfs, ignore_index=True)
+    df_save.to_csv(
+        ARQUIVO_EXTRAS,
+        sep=";",
+        index=False,
+        encoding="utf-8"
+    )
 
 # ==================================================
 # INSERIR UM NOVO REPASSE
 # ==================================================
 def inserir_repasse(exercicio, competencia, credor, fonte, repasse):
-    arquivo = os.path.join(DATA_DIR, f"extras_{exercicio}.csv")
-
-    if os.path.exists(arquivo):
-        df = pd.read_csv(arquivo, sep=";", dtype=str)
-        df["Repasse"] = df["Repasse"].apply(moeda_para_float)
-    else:
-        df = pd.DataFrame(columns=COLUNAS)
+    df = carregar_extras()
 
     novo = pd.DataFrame([{
         "Exercício": int(exercicio),
@@ -74,19 +76,29 @@ def inserir_repasse(exercicio, competencia, credor, fonte, repasse):
     }])
 
     df = pd.concat([df, novo], ignore_index=True)
-
-    df_save = df.copy()
-    df_save["Repasse"] = df_save["Repasse"].apply(float_para_moeda)
-
-    df_save.to_csv(
-        arquivo,
-        sep=";",
-        index=False,
-        encoding="utf-8"
-    )
+    salvar_extras(df)
 
 # ==================================================
-# FILTROS
+# INSERIR REPASSE FIXO (12 MESES)
+# ==================================================
+def inserir_repasse_fixo(exercicio, credor, fonte, valor_mensal):
+    df = carregar_extras()
+
+    registros = []
+    for mes in MESES:
+        registros.append({
+            "Exercício": int(exercicio),
+            "Competência": mes,
+            "Credor": credor,
+            "Fonte": fonte,
+            "Repasse": float(valor_mensal)
+        })
+
+    df = pd.concat([df, pd.DataFrame(registros)], ignore_index=True)
+    salvar_extras(df)
+
+# ==================================================
+# FILTROS BÁSICOS
 # ==================================================
 def filtrar_extras(df, exercicios=None, credores=None, competencias=None):
     df_f = df.copy()
@@ -101,13 +113,3 @@ def filtrar_extras(df, exercicios=None, credores=None, competencias=None):
         df_f = df_f[df_f["Competência"].isin(competencias)]
 
     return df_f
-
-# ==================================================
-# AGREGAÇÕES (GRÁFICOS)
-# ==================================================
-def agregar_repasse_por_exercicio(df):
-    return (
-        df
-        .groupby("Exercício", as_index=False)
-        .agg({"Repasse": "sum"})
-    )
