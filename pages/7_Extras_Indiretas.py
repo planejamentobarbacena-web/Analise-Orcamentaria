@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import altair as alt
 
 from utils_extras import (
     carregar_extras,
@@ -189,4 +190,5 @@ grafico = (
 st.altair_chart(grafico, use_container_width=True)
 
 st.caption("Repasse – Administração Indireta • Consulta")
+
 
