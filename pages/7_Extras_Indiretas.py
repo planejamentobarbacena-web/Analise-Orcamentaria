@@ -135,17 +135,23 @@ st.download_button(
     mime="text/csv"
 )
 # ==================================================
-# GRÁFICO – TOTAL MENSAL (ROBUSTO)
+# GRÁFICO – TOTAL DE REPASSES POR MÊS (VALOR REAL)
 # ==================================================
 st.markdown("---")
 st.subheader("📊 Total de Repasses por Mês")
 
-# Agrupamento simples e seguro
+# Agrupamento simples
 df_graf = (
     df_f
     .groupby("Competência", as_index=False)
     .agg({"Repasse": "sum"})
 )
+
+# 👉 GARANTIA: converter para número em reais
+df_graf["Repasse"] = pd.to_numeric(df_graf["Repasse"], errors="coerce").fillna(0)
+
+# 👉 SE seus dados estiverem em milhões, descomente a linha abaixo
+# df_graf["Repasse"] = df_graf["Repasse"] * 1_000_000
 
 # Ordem correta dos meses
 df_graf["Competência"] = pd.Categorical(
@@ -173,7 +179,7 @@ fig.update_layout(
     showlegend=False
 )
 
-# Total geral (igual ao subtotal)
+# Total geral (bate com o subtotal)
 fig.add_annotation(
     text=f"<b>Total:</b> {float_para_moeda(subtotal)}",
     xref="paper",
@@ -186,7 +192,9 @@ fig.add_annotation(
 
 st.plotly_chart(fig, use_container_width=True)
 
+
 st.caption("Repasse – Administração Indireta • Consulta")
+
 
 
 
