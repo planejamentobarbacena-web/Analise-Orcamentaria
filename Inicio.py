@@ -3,6 +3,15 @@ import pandas as pd
 import os
 
 # =====================================================
+# NAVEGAÇÃO VIA QUERY PARAM (CARDS)
+# =====================================================
+params = st.experimental_get_query_params()
+if "page" in params:
+    destino = params["page"][0]
+    st.experimental_set_query_params()  # limpa URL
+    st.switch_page(destino)
+
+# =====================================================
 # CONFIGURAÇÃO GERAL
 # =====================================================
 st.set_page_config(
@@ -18,15 +27,15 @@ st.markdown("""
 <style>
     .titulo-central {
         text-align: center;
-        font-size: 3.6rem;
+        font-size: 3.4rem;
         font-weight: 700;
         color: #1f77b4;
         margin-top: 0;
-        margin-bottom: 0.5rem;
+        margin-bottom: 0.4rem;
     }
     .subtitulo-central {
         text-align: center;
-        font-size: 1.1rem;
+        font-size: 1.05rem;
         color: #555;
         margin-bottom: 2rem;
     }
@@ -41,17 +50,14 @@ USUARIOS_CSV = "data/usuarios.csv"
 def carregar_usuarios():
     if not os.path.exists(USUARIOS_CSV):
         os.makedirs(os.path.dirname(USUARIOS_CSV), exist_ok=True)
-        df = pd.DataFrame(columns=["usuario", "senha", "perfil"])
-        df.to_csv(USUARIOS_CSV, index=False)
+        pd.DataFrame(
+            columns=["usuario", "senha", "perfil"]
+        ).to_csv(USUARIOS_CSV, index=False)
 
     df = pd.read_csv(USUARIOS_CSV).fillna("")
-
-    df["usuario"] = df["usuario"].astype(str).str.strip()
-    df["senha"] = df["senha"].astype(str).str.strip()
-    df["perfil"] = df["perfil"].astype(str).str.strip()
-
+    for c in ["usuario", "senha", "perfil"]:
+        df[c] = df[c].astype(str).str.strip()
     return df
-
 
 def autenticar(usuario, senha):
     df = carregar_usuarios()
@@ -77,9 +83,7 @@ if "perfil" not in st.session_state:
 # LOGOUT
 # =====================================================
 def logout():
-    st.session_state.logado = False
-    st.session_state.usuario = None
-    st.session_state.perfil = None
+    st.session_state.clear()
     st.rerun()
 
 # =====================================================
@@ -94,7 +98,7 @@ if not st.session_state.logado:
     with col2:
         senha = st.text_input("Senha", type="password")
 
-    if st.button("Entrar"):
+    if st.button("Entrar", use_container_width=True):
         ok, dados = autenticar(usuario, senha)
         if ok:
             st.session_state.logado = True
@@ -126,10 +130,10 @@ st.markdown(
 st.markdown("---")
 
 # =====================================================
-# FUNÇÃO DE CARD
+# FUNÇÃO CARD
 # =====================================================
 def card_modulo(titulo, descricao, pagina):
-    chave = f"btn_{pagina.replace('/', '_').replace('.py','')}"
+    chave = f"btn_{pagina.replace('.py','')}"
     with st.container():
         st.markdown(f"### {titulo}")
         st.caption(descricao)
@@ -187,7 +191,3 @@ with col6:
         "Repasses às Administrações Indiretas",
         "7_Extras_Indiretas.py"
     )
-
-
-
-
