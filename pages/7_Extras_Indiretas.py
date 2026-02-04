@@ -138,53 +138,46 @@ st.download_button(
     mime="text/csv"
 )
 # ==================================================
-# GRÁFICO – Evolução Mensal (Barras)
+# GRÁFICO – Total de Repasses (Barras)
 # ==================================================
 st.markdown("---")
-st.subheader("📈 Evolução Mensal dos Repasses")
+st.subheader("📊 Total de Repasses")
 
-# AGRUPAR CORRETAMENTE
+# Garantir que Repasse seja numérico
+df_f["Repasse"] = (
+    df_f["Repasse"]
+    .astype(str)
+    .str.replace("R$", "", regex=False)
+    .str.replace(".", "", regex=False)
+    .str.replace(",", ".", regex=False)
+    .astype(float)
+)
+
+df_f["Exercício"] = df_f["Exercício"].astype(str)
+
+# Agrupar
 df_graf = (
     df_f
-    .groupby(["Competência", "Credor", "Exercício"], as_index=False)
+    .groupby("Exercício", as_index=False)
     .agg({"Repasse": "sum"})
 )
 
-# Tipos corretos
-df_graf["Exercício"] = df_graf["Exercício"].astype(str)
-df_graf["Repasse"] = pd.to_numeric(df_graf["Repasse"], errors="coerce").fillna(0)
-
-# Ordem correta dos meses
-df_graf["Competência"] = pd.Categorical(
-    df_graf["Competência"],
-    categories=MESES,
-    ordered=True
-)
-
-# GRÁFICO DE BARRAS
+# Gráfico de barras
 fig = px.bar(
     df_graf,
-    x="Competência",
+    x="Exercício",
     y="Repasse",
-    color="Exercício",
-    barmode="group",
-    facet_col="Credor",
     labels={
-        "Competência": "Mês",
-        "Repasse": "Valor (R$)",
         "Exercício": "Ano",
-        "Credor": "Credor"
+        "Repasse": "Valor (R$)"
     }
 )
 
-# Formatar eixo Y como moeda (sem virar string!)
-for axis in fig.layout:
-    if axis.startswith("yaxis"):
-        fig.layout[axis].tickprefix = "R$ "
-        fig.layout[axis].tickformat = ",.0f"
-
+# Formatar eixo Y como moeda
 fig.update_layout(
     height=520,
+    yaxis_tickprefix="R$ ",
+    yaxis_tickformat=",.0f",
     legend=dict(
         orientation="h",
         y=-0.25,
@@ -193,5 +186,8 @@ fig.update_layout(
     )
 )
 
+st.plotly_chart(fig, use_container_width=True)
+
 st.caption("Repasse – Administração Indireta • Consulta")
+
 
