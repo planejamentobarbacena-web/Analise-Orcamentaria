@@ -56,7 +56,9 @@ col1, col2 = st.columns(2)
 # Linha 2
 col3, col4 = st.columns(2)
 
-# ---- Fonte / Recurso (Código)
+# -----------------------------------------------------
+# Fonte / Recurso (Código)
+# -----------------------------------------------------
 mapa = (
     df_full[["Codigo", "Especificacao"]]
     .drop_duplicates()
@@ -69,7 +71,8 @@ opcoes_recurso = (
 
 recurso_sel = col1.selectbox(
     "Fonte / Recurso",
-    ["Todos"] + opcoes_recurso
+    ["Todos"] + opcoes_recurso,
+    key="filtro_recurso"
 )
 
 df = df_full.copy()
@@ -78,19 +81,33 @@ if recurso_sel != "Todos":
     codigo_sel = recurso_sel.split(" - ")[0]
     df = df[df["Codigo"] == codigo_sel]
 
-# ---- Exercício
+# -----------------------------------------------------
+# Exercício (com preservação de estado)
+# -----------------------------------------------------
 anos_disp = sorted(df["Exercício"].unique())
+
+if "filtro_exercicio_recurso" in st.session_state:
+    valores_atuais = st.session_state["filtro_exercicio_recurso"]
+    valores_validos = [
+        v for v in valores_atuais
+        if v == "Todos" or v in anos_disp
+    ]
+    if valores_validos:
+        st.session_state["filtro_exercicio_recurso"] = valores_validos
 
 sel_anos = col2.multiselect(
     "Exercício",
     ["Todos"] + anos_disp,
-    default=["Todos"]
+    default=["Todos"],
+    key="filtro_exercicio_recurso"
 )
 
 if "Todos" not in sel_anos:
     df = df[df["Exercício"].isin(sel_anos)]
 
-# ---- Competência
+# -----------------------------------------------------
+# Competência
+# -----------------------------------------------------
 ordem_meses = [
     "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
     "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
@@ -99,16 +116,20 @@ ordem_meses = [
 comp_sel = col3.multiselect(
     "Competência",
     ["Todas"] + ordem_meses,
-    default=["Todas"]
+    default=["Todas"],
+    key="filtro_competencia_recurso"
 )
 
 if "Todas" not in comp_sel:
     df = df[df["Competência"].isin(comp_sel)]
 
-# ---- Tipo de Valor
+# -----------------------------------------------------
+# Tipo de Valor
+# -----------------------------------------------------
 tipo_valor = col4.selectbox(
     "Tipo de Valor",
-    ["Ambos", "Previsto", "Realizado"]
+    ["Ambos", "Previsto", "Realizado"],
+    key="filtro_tipo_valor_recurso"
 )
 
 if tipo_valor == "Previsto":
@@ -188,4 +209,4 @@ st.download_button(
     mime="text/csv"
 )
 
-st.caption("Metas por Fonte / Recurso • Visualização dinâmica por tipo de valor")
+st.caption("Metas por Fonte / Recurso • Visualização dinâmica e consistente")
