@@ -42,11 +42,11 @@ if df.empty:
     st.stop()
 
 # ==================================================
-# FILTROS (ORGANIZAÇÃO INVERTIDA)
+# FILTROS
 # ==================================================
 st.subheader("🎯 Filtros")
 
-# 🔁 LINHA 1: Credor | Exercício
+# Linha 1: Credor | Exercício
 col1, col2 = st.columns(2)
 
 credores = sorted(df["Credor"].unique())
@@ -63,7 +63,7 @@ ex_sel = col2.multiselect(
     default=exercicios
 )
 
-# 🔁 LINHA 2: Competência | Fonte
+# Linha 2: Competência | Fonte
 col3, col4 = st.columns(2)
 
 comp_opcoes = ["Todos"] + MESES
@@ -95,11 +95,52 @@ df_f = filtrar_extras(
 if "Todos" not in fonte_sel:
     df_f = df_f[df_f["Fonte"].isin(fonte_sel)]
 
-# 🔒 BLINDAGEM FINAL DO REPASSE
+# Blindagem do campo Repasse
 df_f["Repasse"] = pd.to_numeric(df_f["Repasse"], errors="coerce").fillna(0)
 
 # ==================================================
-# GRÁFICO
+# TABELA
+# ==================================================
+st.markdown("---")
+st.subheader("📋 Detalhamento")
+
+df_tabela = df_f.copy()
+
+# Ordem correta dos meses
+df_tabela["Competência"] = pd.Categorical(
+    df_tabela["Competência"],
+    categories=MESES,
+    ordered=True
+)
+
+df_tabela["Exercício"] = df_tabela["Exercício"].astype(str)
+df_tabela["Repasse"] = df_tabela["Repasse"].apply(float_para_moeda)
+
+df_tabela = df_tabela.sort_values(
+    ["Exercício", "Competência", "Credor"]
+)
+
+st.dataframe(
+    df_tabela,
+    use_container_width=True,
+    hide_index=True
+)
+
+# ==================================================
+# DOWNLOAD
+# ==================================================
+st.markdown("---")
+
+csv = df_tabela.to_csv(index=False, sep=";", encoding="utf-8")
+st.download_button(
+    "⬇️ Baixar CSV",
+    csv,
+    file_name="repasse_indireta.csv",
+    mime="text/csv"
+)
+
+# ==================================================
+# GRÁFICO (NO FINAL)
 # ==================================================
 st.markdown("---")
 st.subheader("📈 Evolução Mensal dos Repasses")
@@ -149,38 +190,5 @@ fig.for_each_annotation(
 )
 
 st.plotly_chart(fig, use_container_width=True)
-
-# ==================================================
-# TABELA
-# ==================================================
-st.markdown("---")
-st.subheader("📋 Detalhamento")
-
-df_tabela = df_f.copy()
-df_tabela["Exercício"] = df_tabela["Exercício"].astype(str)
-df_tabela["Repasse"] = df_tabela["Repasse"].apply(float_para_moeda)
-
-df_tabela = df_tabela.sort_values(
-    ["Exercício", "Competência", "Credor"]
-)
-
-st.dataframe(
-    df_tabela,
-    use_container_width=True,
-    hide_index=True
-)
-
-# ==================================================
-# DOWNLOAD
-# ==================================================
-st.markdown("---")
-
-csv = df_tabela.to_csv(index=False, sep=";", encoding="utf-8")
-st.download_button(
-    "⬇️ Baixar CSV",
-    csv,
-    file_name="repasse_indireta.csv",
-    mime="text/csv"
-)
 
 st.caption("Repasse – Administração Indireta • Consulta")
