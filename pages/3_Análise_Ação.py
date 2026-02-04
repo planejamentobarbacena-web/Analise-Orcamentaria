@@ -1,23 +1,22 @@
 import streamlit as st
 import pandas as pd
 import altair as alt
+
 from utils import exercicios_disponiveis, carregar_despesas
 
 # =====================================================
-# BLOQUEIO DE ACESSO E PERFIS
+# SEGURANÇA
 # =====================================================
 if "logado" not in st.session_state or not st.session_state.logado:
-    st.warning("🔒 Acesso negado! Faça login no sistema para acessar esta página.")
+    st.warning("🔒 Acesso negado!")
     st.stop()
 
-PERFIS_PERMITIDOS = ["administrador", "consulta"]
-perfil_usuario = st.session_state.get("perfil", "")
-if perfil_usuario not in PERFIS_PERMITIDOS:
-    st.error("🚫 Seu perfil não tem permissão para acessar esta página.")
+if st.session_state.get("perfil") not in ["administrador", "consulta"]:
+    st.error("🚫 Perfil sem permissão.")
     st.stop()
 
 # =====================================================
-# CONFIGURAÇÃO DA PÁGINA
+# CONFIGURAÇÃO
 # =====================================================
 st.set_page_config(
     page_title="Análise por Ação",
@@ -40,30 +39,32 @@ def fmt_moeda_br(valor):
 # =====================================================
 st.subheader("🎯 Filtros")
 
-col1, col2 = st.columns(2)
-
+# -----------------------------------------------------
+# EXERCÍCIO (LIVRE)
+# -----------------------------------------------------
 exercicios = exercicios_disponiveis()
-opcoes_exercicio = ["Todos"] + exercicios
-exercicio_sel = col1.multiselect(
+
+sel_ex = st.multiselect(
     "Exercício",
-    options=opcoes_exercicio,
-    default=["Todos"]
+    ["Todos"] + exercicios,
+    default=st.session_state.get("acao_exercicio", ["Todos"]),
+    key="acao_exercicio"
 )
 
-exercicios_escolhidos = exercicios if "Todos" in exercicio_sel else exercicio_sel
+anos = exercicios if "Todos" in sel_ex else sel_ex
 
 # =====================================================
 # CARGA DOS DADOS
 # =====================================================
 dfs = []
 
-for ano in exercicios_escolhidos:
+for ano in anos:
     try:
         df_ano = carregar_despesas(ano)
         df_ano["Exercício"] = ano
         dfs.append(df_ano)
-    except Exception as e:
-        st.warning(f"Ano {ano} ignorado: {e}")
+    except Exception:
+        pass
 
 if not dfs:
     st.warning("Nenhum dado encontrado.")
@@ -74,53 +75,69 @@ df = pd.concat(dfs, ignore_index=True)
 # =====================================================
 # NORMALIZAÇÃO
 # =====================================================
-for col in [
-    "Entidade",
-    "Número da ação",
-    "Descrição da ação",
-    "Recurso"
-]:
+for col in ["Entidade", "Número da ação", "Descrição da ação", "Recurso"]:
     if col in df.columns:
         df[col] = df[col].astype(str).str.strip()
 
-# =====================================================
-# FILTRO ENTIDADE
-# =====================================================
-entidades = ["Todos"] + sorted(df["Entidade"].dropna().unique().tolist())
-entidade_sel = col2.selectbox("Entidade", entidades)
+# -----------------------------------------------------
+# ENTIDADE (FILTRO LIVRE)
+# -----------------------------------------------------
+entidades = ["Todos"] + sorted(df["Entidade"].dropna().unique())
+
+valor_atual = st.session_state.get("acao_entidade", "Todos")
+if valor_atual not in entidades:
+    valor_atual = "Todos"
+
+entidade_sel = st.selectbox(
+    "Entidade",
+    entidades,
+    index=entidades.index(valor_atual),
+    key="acao_entidade"
+)
 
 if entidade_sel != "Todos":
     df = df[df["Entidade"] == entidade_sel]
 
-# =====================================================
-# FILTRO AÇÃO (DESCRIÇÃO – SOMENTE PARA LEITURA)
-# =====================================================
-acoes = ["Todos"] + sorted(df["Descrição da ação"].dropna().unique().tolist())
+# -----------------------------------------------------
+# AÇÃO (FILTRO LIVRE)
+# -----------------------------------------------------
+acoes = ["Todos"] + sorted(df["Descrição da ação"].dropna().unique())
+
+valor_atual = st.session_state.get("acao_desc", ["Todos"])
+if not set(valor_atual).intersection(acoes):
+    valor_atual = ["Todos"]
+
 acoes_sel = st.multiselect(
     "Descrição da Ação",
     options=acoes,
-    default=["Todos"]
+    default=valor_atual,
+    key="acao_desc"
 )
 
 if "Todos" not in acoes_sel:
     df = df[df["Descrição da ação"].isin(acoes_sel)]
 
-# =====================================================
-# FILTRO RECURSO
-# =====================================================
-recursos = ["Todos"] + sorted(df["Recurso"].dropna().unique().tolist())
+# -----------------------------------------------------
+# RECURSO (FILTRO LIVRE)
+# -----------------------------------------------------
+recursos = ["Todos"] + sorted(df["Recurso"].dropna().unique())
+
+valor_atual = st.session_state.get("acao_recurso", ["Todos"])
+if not set(valor_atual).intersection(recursos):
+    valor_atual = ["Todos"]
+
 recursos_sel = st.multiselect(
     "Fonte de Recurso",
     options=recursos,
-    default=["Todos"]
+    default=valor_atual,
+    key="acao_recurso"
 )
 
 if "Todos" not in recursos_sel:
     df = df[df["Recurso"].isin(recursos_sel)]
 
 # =====================================================
-# AGREGAÇÃO CORRETA
-# (AÇÃO + RECURSO | NATUREZA IGNORADA)
+# AGREGAÇÃO
 # =====================================================
 chaves = [
     "Exercício",
@@ -129,7 +146,7 @@ chaves = [
     "Recurso"
 ]
 
-df_agregado = (
+df_ag = (
     df
     .groupby(chaves, as_index=False)[
         ["valor_orcado", "valor_atualizado", "valor_empenhado"]
@@ -137,33 +154,32 @@ df_agregado = (
     .sum()
 )
 
-# Recupera descrição da ação apenas para exibição
-descricao_acao = (
+descricao = (
     df[["Número da ação", "Descrição da ação"]]
     .drop_duplicates()
 )
 
-df_agregado = df_agregado.merge(
-    descricao_acao,
+df_ag = df_ag.merge(
+    descricao,
     on="Número da ação",
     how="left"
 )
 
 # =====================================================
-# GRÁFICO – VISÃO GERAL POR EXERCÍCIO
+# GRÁFICO
 # =====================================================
 st.markdown("---")
 st.subheader("📊 Comparativo Orçamentário por Exercício")
 
-df_grafico = (
-    df_agregado
+df_graf = (
+    df_ag
     .groupby("Exercício", as_index=False)[
         ["valor_orcado", "valor_atualizado", "valor_empenhado"]
     ]
     .sum()
 )
 
-df_long = df_grafico.melt(
+df_long = df_graf.melt(
     id_vars="Exercício",
     value_vars=["valor_orcado", "valor_atualizado", "valor_empenhado"],
     var_name="Tipo",
@@ -176,18 +192,18 @@ df_long["Tipo"] = df_long["Tipo"].map({
     "valor_empenhado": "Empenhada"
 })
 
-ordem_tipo = ["Orçada", "Atualizada", "Empenhada"]
-df_long["Tipo"] = pd.Categorical(df_long["Tipo"], categories=ordem_tipo, ordered=True)
+ordem = ["Orçada", "Atualizada", "Empenhada"]
+df_long["Tipo"] = pd.Categorical(df_long["Tipo"], categories=ordem, ordered=True)
 df_long["Valor_fmt"] = df_long["Valor"].apply(fmt_moeda_br)
 
 grafico = (
     alt.Chart(df_long)
-    .mark_bar()
+    .mark_bar(size=30)
     .encode(
         x=alt.X("Exercício:N", title="Exercício"),
-        xOffset=alt.XOffset("Tipo:N", sort=ordem_tipo),
+        xOffset=alt.XOffset("Tipo:N", sort=ordem),
         y=alt.Y("Valor:Q", title="Valor (R$)"),
-        color=alt.Color("Tipo:N", title="Despesa", sort=ordem_tipo),
+        color=alt.Color("Tipo:N", title="Despesa", sort=ordem),
         tooltip=[
             "Exercício:N",
             "Tipo:N",
@@ -200,12 +216,12 @@ grafico = (
 st.altair_chart(grafico, use_container_width=True)
 
 # =====================================================
-# TABELA DETALHADA
+# TABELA
 # =====================================================
 st.markdown("---")
 st.subheader("📋 Detalhamento por Ação e Fonte de Recurso")
 
-tabela = df_agregado.rename(columns={
+tabela = df_ag.rename(columns={
     "Descrição da ação": "Descrição da Ação",
     "Recurso": "Fonte de Recurso",
     "valor_orcado": "Valor Orçado",
@@ -233,7 +249,7 @@ st.dataframe(
 )
 
 # =====================================================
-# DOWNLOAD CSV
+# DOWNLOAD
 # =====================================================
 csv = tabela.to_csv(index=False, sep=";", encoding="utf-8")
 st.download_button(
