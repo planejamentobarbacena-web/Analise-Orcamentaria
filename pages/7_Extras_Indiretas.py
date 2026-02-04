@@ -145,26 +145,18 @@ st.subheader("📊 Comparativo Orçamentário por Exercício")
 
 df_grafico = (
     df_ag
-    .groupby("Exercício", as_index=False)[
-        ["valor_orcado", "valor_atualizado", "valor_empenhado"]
-    ]
-    .sum()
+    .groupby("Exercício", as_index=False)
 )
 
 df_long = df_grafico.melt(
     id_vars="Exercício",
-    value_vars=["valor_orcado", "valor_atualizado", "valor_empenhado"],
+    value_vars=["Repasse"],
     var_name="Tipo",
     value_name="Valor"
 )
 
-df_long["Tipo"] = df_long["Tipo"].map({
-    "valor_orcado": "Orçada",
-    "valor_atualizado": "Atualizada",
-    "valor_empenhado": "Empenhada"
-})
 
-ordem_tipo = ["Orçada", "Atualizada", "Empenhada"]
+ordem_tipo = ["Competência", "Credor", "Exercício"]
 df_long["Tipo"] = pd.Categorical(
     df_long["Tipo"],
     categories=ordem_tipo,
@@ -197,3 +189,4 @@ grafico = (
 st.altair_chart(grafico, use_container_width=True)
 
 st.caption("Repasse – Administração Indireta • Consulta")
+
