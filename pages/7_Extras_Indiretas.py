@@ -85,13 +85,11 @@ subtotal = df_f["Repasse"].sum()
 # SUBTOTAL
 # ==================================================
 st.markdown("---")
-st.subheader("💰 Subtotal dos Repasses (filtros aplicados)")
+st.subheader("💰 Subtotal dos Repasses")
 
-c1, c2, c3 = st.columns(3)
+c1 = st.columns(1)
 
 c1.metric("Valor Total", float_para_moeda(subtotal))
-c2.metric("Qtd. Registros", f"{len(df_f):,}".replace(",", "."))
-c3.metric("Credores", df_f["Credor"].nunique())
 
 # ==================================================
 # TABELA
@@ -134,5 +132,6 @@ st.download_button(
 )
 
 st.caption("Repasse – Administração Indireta • Consulta")
+
 
 
