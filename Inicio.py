@@ -41,12 +41,17 @@ USUARIOS_CSV = "data/usuarios.csv"
 def carregar_usuarios():
     if not os.path.exists(USUARIOS_CSV):
         os.makedirs(os.path.dirname(USUARIOS_CSV), exist_ok=True)
-        pd.DataFrame(
-            columns=["usuario", "senha", "perfil"]
-        ).to_csv(USUARIOS_CSV, index=False)
+        df = pd.DataFrame(columns=["usuario", "senha", "perfil"])
+        df.to_csv(USUARIOS_CSV, index=False)
 
     df = pd.read_csv(USUARIOS_CSV).fillna("")
+
+    df["usuario"] = df["usuario"].astype(str).str.strip()
+    df["senha"] = df["senha"].astype(str).str.strip()
+    df["perfil"] = df["perfil"].astype(str).str.strip()
+
     return df
+
 
 def autenticar(usuario, senha):
     df = carregar_usuarios()
@@ -184,3 +189,4 @@ with col6:
         "Repasses às Administrações Indiretas",
         "7_Extras_Indiretas.py"
     )
+
