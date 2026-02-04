@@ -172,7 +172,7 @@ fig = px.bar(
     labels={
         "Competência": "Mês",
         "Exercício": "Ano",
-        "Repasse": "Valor",
+        "Repasse": "Repasse",
         "Credor": "Credor"
     }
 )
@@ -194,6 +194,7 @@ fig.update_layout(
 )
 
 st.caption("Repasse – Administração Indireta • Consulta")
+
 
 
 
