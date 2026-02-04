@@ -129,15 +129,12 @@ st.markdown("---")
 # FUNÇÃO DE CARD
 # =====================================================
 def card_modulo(titulo, descricao, pagina):
+    chave = f"btn_{pagina.replace('/', '_').replace('.py','')}"
     with st.container():
         st.markdown(f"### {titulo}")
         st.caption(descricao)
-        st.page_link(
-            f"pages/{pagina}",
-            label="Acessar",
-            icon="➡️",
-            use_container_width=True
-        )
+        if st.button("Acessar", key=chave, use_container_width=True):
+            st.switch_page(f"pages/{pagina}")
 
 # =====================================================
 # GRID DE CARDS
@@ -189,4 +186,5 @@ with col6:
         "Repasses às Administrações Indiretas",
         "7_Extras_Indiretas.py"
     )
+
 
