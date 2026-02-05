@@ -12,29 +12,32 @@ st.set_page_config(
 )
 
 # =====================================================
-# ESTILO CSS
+# CORES E FONTES
+# =====================================================
+COR_PRINCIPAL = "#1f77b4"
+COR_TITULO = "#1f77b4"
+COR_TEXTO = "#334155"
+FONTE_TITULO = "Inter, Arial, sans-serif"
+FONTE_TEXTO = "Inter, Arial, sans-serif"
+
+# =====================================================
+# ESTILO CSS (igual ao antigo)
 # =====================================================
 st.markdown("""
 <style>
     .titulo-central {
         text-align: center;
-        font-size: 3rem;
+        font-size: 3.6rem;
         font-weight: 700;
         color: #1f77b4;
-        margin-bottom: 0.3rem;
+        margin-top: 0;
+        margin-bottom: 0.5rem;
     }
     .subtitulo-central {
         text-align: center;
         font-size: 1.1rem;
         color: #555;
         margin-bottom: 2rem;
-    }
-    .card {
-        padding: 18px;
-        border-radius: 10px;
-        border: 1px solid #e6e6e6;
-        background-color: #fafafa;
-        margin-bottom: 10px;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -59,14 +62,9 @@ def carregar_usuarios():
 
 def autenticar(usuario, senha):
     df = carregar_usuarios()
-    user = df[
-        (df["usuario"].str.lower() == usuario.lower()) &
-        (df["senha"] == senha)
-    ]
-
+    user = df[(df["usuario"].str.lower() == usuario.lower()) & (df["senha"] == senha)]
     if user.empty:
         return False, None
-
     return True, user.iloc[0]
 
 # =====================================================
@@ -89,7 +87,7 @@ def logout():
     st.rerun()
 
 # =====================================================
-# TELA DE LOGIN
+# LOGIN
 # =====================================================
 if not st.session_state.logado:
     st.title("🔐 Login do Sistema")
@@ -100,7 +98,7 @@ if not st.session_state.logado:
     with col2:
         senha = st.text_input("Senha", type="password")
 
-    if st.button("Entrar", use_container_width=True):
+    if st.button("Entrar"):
         ok, dados = autenticar(usuario, senha)
         if ok:
             st.session_state.logado = True
@@ -129,18 +127,16 @@ st.markdown('<div class="subtitulo-central">Escolha o módulo que deseja acessar
 st.markdown("---")
 
 # =====================================================
-# FUNÇÃO DE CARD (SEM switch_page)
+# CARD COM VISUAL ANTIGO + NAVEGAÇÃO NOVA
 # =====================================================
 def card_modulo(titulo, descricao, pagina):
     with st.container():
-        st.markdown('<div class="card">', unsafe_allow_html=True)
-        st.markdown(f"**{titulo}**")
+        st.markdown(f"### {titulo}")
         st.caption(descricao)
-        st.page_link(pagina, label="Acessar módulo", use_container_width=True)
-        st.markdown('</div>', unsafe_allow_html=True)
+        st.page_link(pagina, label="Acessar", use_container_width=True)
 
 # =====================================================
-# GRID DE CARDS
+# GRID
 # =====================================================
 col1, col2, col3 = st.columns(3)
 
