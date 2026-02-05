@@ -12,16 +12,7 @@ st.set_page_config(
 )
 
 # =====================================================
-# CORES E FONTES
-# =====================================================
-COR_PRINCIPAL = "#1f77b4"
-COR_TITULO = "#1f77b4"
-COR_TEXTO = "#334155"
-FONTE_TITULO = "Inter, Arial, sans-serif"
-FONTE_TEXTO = "Inter, Arial, sans-serif"
-
-# =====================================================
-# ESTILO CSS (igual ao antigo)
+# ESTILO CSS
 # =====================================================
 st.markdown("""
 <style>
@@ -33,11 +24,35 @@ st.markdown("""
         margin-top: 0;
         margin-bottom: 0.5rem;
     }
+
     .subtitulo-central {
         text-align: center;
         font-size: 1.1rem;
         color: #555;
         margin-bottom: 2rem;
+    }
+
+    /* Centralizar botão dentro do card */
+    .card-botao {
+        display: flex;
+        justify-content: center;
+        margin-top: 12px;
+        margin-bottom: 6px;
+    }
+
+    /* Estilo do botão */
+    div.stButton > button {
+        border: 2px solid #0f2a44;
+        color: #0f2a44;
+        background-color: white;
+        font-weight: 600;
+        padding: 0.45rem 1.2rem;
+        border-radius: 8px;
+    }
+
+    div.stButton > button:hover {
+        background-color: #0f2a44;
+        color: white;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -127,16 +142,19 @@ st.markdown('<div class="subtitulo-central">Escolha o módulo que deseja acessar
 st.markdown("---")
 
 # =====================================================
-# CARD COM VISUAL ANTIGO + NAVEGAÇÃO NOVA
+# FUNÇÃO DE CARD
 # =====================================================
 def card_modulo(titulo, descricao, pagina):
     with st.container():
         st.markdown(f"### {titulo}")
         st.caption(descricao)
-        st.page_link(pagina, label="Acessar", use_container_width=True)
+
+        st.markdown('<div class="card-botao">', unsafe_allow_html=True)
+        st.page_link(pagina, label="Acessar", use_container_width=False)
+        st.markdown('</div>', unsafe_allow_html=True)
 
 # =====================================================
-# GRID
+# GRID DE CARDS
 # =====================================================
 col1, col2, col3 = st.columns(3)
 
