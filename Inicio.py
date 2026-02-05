@@ -3,15 +3,6 @@ import pandas as pd
 import os
 
 # =====================================================
-# NAVEGAÇÃO VIA QUERY PARAM (CARDS)
-# =====================================================
-params = st.experimental_get_query_params()
-if "pages" in params:
-    destino = params["pages"][0]
-    st.experimental_set_query_params()  # limpa URL
-    st.switch_pages(destino)
-
-# =====================================================
 # CONFIGURAÇÃO GERAL
 # =====================================================
 st.set_page_config(
@@ -78,6 +69,8 @@ if "usuario" not in st.session_state:
     st.session_state.usuario = None
 if "perfil" not in st.session_state:
     st.session_state.perfil = None
+if "destino" not in st.session_state:
+    st.session_state.destino = None
 
 # =====================================================
 # LOGOUT
@@ -104,11 +97,34 @@ if not st.session_state.logado:
             st.session_state.logado = True
             st.session_state.usuario = dados["usuario"]
             st.session_state.perfil = dados["perfil"]
-            st.rerun()
+            st.experimental_rerun()
         else:
             st.error("Usuário ou senha inválidos.")
 
     st.stop()
+
+# =====================================================
+# NAVEGAÇÃO VIA QUERY PARAM
+# =====================================================
+params = st.experimental_get_query_params()
+if "page" in params and params["page"]:
+    st.session_state.destino = params["page"][0]
+    st.experimental_set_query_params()  # limpa a URL
+    st.experimental_rerun()
+
+# Se houver destino definido, redireciona para o módulo correspondente
+if st.session_state.destino:
+    destino = st.session_state.pop("destino")  # remove após usar
+    try:
+        # importa a página correspondente da pasta pages
+        page_module = destino.replace(".py", "")
+        page_path = f"pages.{page_module}"
+        # Import dinâmico
+        mod = __import__(page_path, fromlist=[page_module])
+        st.stop()  # interrompe esta página
+    except Exception as e:
+        st.error(f"Não foi possível abrir a página {destino}: {e}")
+        st.session_state.destino = None
 
 # =====================================================
 # SIDEBAR
@@ -138,8 +154,8 @@ def card_modulo(titulo, descricao, pagina):
         st.markdown(f"### {titulo}")
         st.caption(descricao)
         if st.button("Acessar", key=chave, use_container_width=True):
-            st.experimental_set_query_params(page=f"pages/{pagina}")
-            st.rerun()
+            st.experimental_set_query_params(page=pagina)
+            st.experimental_rerun()
 
 # =====================================================
 # GRID DE CARDS
@@ -191,4 +207,3 @@ with col6:
         "Repasses às Administrações Indiretas",
         "7_Extras_Indiretas.py"
     )
-
