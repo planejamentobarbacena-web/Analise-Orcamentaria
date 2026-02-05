@@ -12,29 +12,32 @@ st.set_page_config(
 )
 
 # =====================================================
+# CORES E FONTES (personalizáveis)
+# =====================================================
+COR_PRINCIPAL = "#1f77b4"
+COR_TITULO = "#1f77b4"
+COR_TEXTO = "#334155"
+FONTE_TITULO = "Inter, Arial, sans-serif"
+FONTE_TEXTO = "Inter, Arial, sans-serif"
+
+# =====================================================
 # ESTILO CSS
 # =====================================================
 st.markdown("""
 <style>
     .titulo-central {
         text-align: center;
-        font-size: 3rem;
+        font-size: 3.6rem;
         font-weight: 700;
         color: #1f77b4;
-        margin-bottom: 0.3rem;
+        margin-top: 0;
+        margin-bottom: 0.5rem;
     }
     .subtitulo-central {
         text-align: center;
         font-size: 1.1rem;
         color: #555;
         margin-bottom: 2rem;
-    }
-    .card {
-        padding: 18px;
-        border-radius: 10px;
-        border: 1px solid #e6e6e6;
-        background-color: #fafafa;
-        margin-bottom: 10px;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -49,7 +52,6 @@ def carregar_usuarios():
         os.makedirs(os.path.dirname(USUARIOS_CSV), exist_ok=True)
         df = pd.DataFrame(columns=["usuario","senha","perfil"])
         df.to_csv(USUARIOS_CSV, index=False)
-
     df = pd.read_csv(USUARIOS_CSV)
     df = df.fillna("")
     df["usuario"] = df["usuario"].astype(str).str.strip()
@@ -59,14 +61,9 @@ def carregar_usuarios():
 
 def autenticar(usuario, senha):
     df = carregar_usuarios()
-    user = df[
-        (df["usuario"].str.lower() == usuario.lower()) &
-        (df["senha"] == senha)
-    ]
-
+    user = df[(df["usuario"].str.lower() == usuario.lower()) & (df["senha"] == senha)]
     if user.empty:
         return False, None
-
     return True, user.iloc[0]
 
 # =====================================================
@@ -93,14 +90,12 @@ def logout():
 # =====================================================
 if not st.session_state.logado:
     st.title("🔐 Login do Sistema")
-
     col1, col2 = st.columns(2)
     with col1:
         usuario = st.text_input("Usuário")
     with col2:
         senha = st.text_input("Senha", type="password")
-
-    if st.button("Entrar", use_container_width=True):
+    if st.button("Entrar"):
         ok, dados = autenticar(usuario, senha)
         if ok:
             st.session_state.logado = True
@@ -109,60 +104,59 @@ if not st.session_state.logado:
             st.rerun()
         else:
             st.error("Usuário ou senha inválidos.")
-
-    st.stop()
+    st.stop()  # bloqueia o app até logar
 
 # =====================================================
 # SIDEBAR
 # =====================================================
 st.sidebar.success(f"👤 {st.session_state.usuario}")
 st.sidebar.write(f"Perfil: **{st.session_state.perfil}**")
-
 if st.sidebar.button("🚪 Sair"):
     logout()
 
 # =====================================================
-# TÍTULO PRINCIPAL
+# TELA PRINCIPAL COM CARDS
 # =====================================================
+st.markdown('<div class="bloco-central">', unsafe_allow_html=True)
 st.markdown('<div class="titulo-central">Análise Orçamentária</div>', unsafe_allow_html=True)
 st.markdown('<div class="subtitulo-central">Escolha o módulo que deseja acessar</div>', unsafe_allow_html=True)
 st.markdown("---")
 
-# =====================================================
-# FUNÇÃO DE CARD (SEM switch_page)
-# =====================================================
+# =========================
+# FUNÇÃO DE CARD
+# =========================
 def card_modulo(titulo, descricao, pagina):
+    chave = f"btn_{pagina.replace('/', '_').replace('.py','')}"
     with st.container():
-        st.markdown('<div class="card">', unsafe_allow_html=True)
-        st.markdown(f"**{titulo}**")
+        st.markdown(f"### {titulo}")
         st.caption(descricao)
-        st.page_link(pagina, label="Acessar módulo", use_container_width=True)
-        st.markdown('</div>', unsafe_allow_html=True)
+        if st.button("Acessar", key=chave, use_container_width=True):
+            st.switch_page(pagina)
 
-# =====================================================
+# =========================
 # GRID DE CARDS
-# =====================================================
+# =========================
 col1, col2, col3 = st.columns(3)
 
 with col1:
     card_modulo(
         "📊 Visão Geral",
         "Resumo consolidado e indicadores",
-        "pages/2_Visao_Geral.py"
+        "pages/2_Visão_Geral.py"
     )
 
 with col2:
     card_modulo(
         "🔍 Análise por Ação",
         "Detalhamento por Ação Orçamentária",
-        "pages/3_Analise_Acao.py"
+        "pages/3_Análise_Ação.py"
     )
 
 with col3:
     card_modulo(
         "🧾 Análise por Natureza",
         "Classificação por Natureza da Despesa",
-        "pages/4_Analise_Natureza.py"
+        "pages/4_Análise_Natureza.py"
     )
 
 st.markdown("---")
@@ -186,6 +180,8 @@ with col5:
 with col6:
     card_modulo(
         "🏛️ Extras – Indiretas",
-        "Repasses à Administração Indireta",
+        "Repasses às Administração Indireta",
         "pages/7_Extras_Indiretas.py"
     )
+
+st.markdown("</div>", unsafe_allow_html=True)
