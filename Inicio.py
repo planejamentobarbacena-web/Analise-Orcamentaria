@@ -145,38 +145,12 @@ st.markdown("---")
 # FUNÇÃO DE CARD
 # =====================================================
 def card_modulo(titulo, descricao, pagina):
-    st.markdown("""
-    <style>
-    /* Centraliza o page_link */
-    div[data-testid="stPageLink"] {
-        display: flex;
-        justify-content: center;
-        margin-top: 10px;
-    }
-
-    /* Estilo do botão */
-    div[data-testid="stPageLink"] a {
-        border: 2px solid #0b2a4a;
-        color: #0b2a4a !important;
-        font-weight: 600;
-        border-radius: 10px;
-        padding: 8px 22px;
-        text-decoration: none;
-    }
-
-    /* Hover */
-    div[data-testid="stPageLink"] a:hover {
-        background-color: #0b2a4a;
-        color: white !important;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-
-    with st.container(border=True):
+    chave = f"btn_{pagina.replace('/', '_').replace('.py','')}"
+    with st.container():
         st.markdown(f"### {titulo}")
-        st.markdown(descricao)
-        st.page_link(pagina, label="Acessar")
-
+        st.caption(descricao)
+        if st.button("Acessar", key=chave, use_container_width=True):
+            st.switch_page(pagina)
 
 # =====================================================
 # GRID DE CARDS
@@ -228,5 +202,6 @@ with col6:
         "Repasses à Administração Indireta",
         "pages/7_Extras_Indiretas.py"
     )
+
 
 
