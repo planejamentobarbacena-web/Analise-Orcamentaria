@@ -145,38 +145,37 @@ st.markdown("---")
 # FUNÇÃO DE CARD
 # =====================================================
 def card_modulo(titulo, descricao, pagina):
-    st.markdown(
-        """
-        <style>
-        .botao-acessar a {
-            display: block;
-            text-align: center;
-            border: 2px solid #0b2a4a;
-            padding: 10px 0;
-            border-radius: 10px;
-            color: #0b2a4a !important;
-            font-weight: 600;
-            text-decoration: none;
-        }
-        .botao-acessar a:hover {
-            background-color: #0b2a4a;
-            color: white !important;
-        }
-        </style>
-        """,
-        unsafe_allow_html=True
-    )
+    st.markdown("""
+    <style>
+    /* Centraliza o page_link */
+    div[data-testid="stPageLink"] {
+        display: flex;
+        justify-content: center;
+        margin-top: 10px;
+    }
+
+    /* Estilo do botão */
+    div[data-testid="stPageLink"] a {
+        border: 2px solid #0b2a4a;
+        color: #0b2a4a !important;
+        font-weight: 600;
+        border-radius: 10px;
+        padding: 8px 22px;
+        text-decoration: none;
+    }
+
+    /* Hover */
+    div[data-testid="stPageLink"] a:hover {
+        background-color: #0b2a4a;
+        color: white !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
 
     with st.container(border=True):
         st.markdown(f"### {titulo}")
         st.markdown(descricao)
-
-        # Centraliza o botão
-        col1, col2, col3 = st.columns([1,2,1])
-        with col2:
-            st.markdown('<div class="botao-acessar">', unsafe_allow_html=True)
-            st.page_link(pagina, label="Acessar")
-            st.markdown('</div>', unsafe_allow_html=True)
+        st.page_link(pagina, label="Acessar")
 
 
 # =====================================================
@@ -229,4 +228,5 @@ with col6:
         "Repasses à Administração Indireta",
         "pages/7_Extras_Indiretas.py"
     )
+
 
