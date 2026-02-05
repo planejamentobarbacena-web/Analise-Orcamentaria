@@ -41,9 +41,7 @@ USUARIOS_CSV = "data/usuarios.csv"
 def carregar_usuarios():
     if not os.path.exists(USUARIOS_CSV):
         os.makedirs(os.path.dirname(USUARIOS_CSV), exist_ok=True)
-        pd.DataFrame(
-            columns=["usuario", "senha", "perfil"]
-        ).to_csv(USUARIOS_CSV, index=False)
+        pd.DataFrame(columns=["usuario", "senha", "perfil"]).to_csv(USUARIOS_CSV, index=False)
 
     df = pd.read_csv(USUARIOS_CSV).fillna("")
     for c in ["usuario", "senha", "perfil"]:
@@ -69,15 +67,13 @@ if "usuario" not in st.session_state:
     st.session_state.usuario = None
 if "perfil" not in st.session_state:
     st.session_state.perfil = None
-if "destino" not in st.session_state:
-    st.session_state.destino = None
 
 # =====================================================
 # LOGOUT
 # =====================================================
 def logout():
     st.session_state.clear()
-    st.rerun()
+    st.experimental_rerun()
 
 # =====================================================
 # LOGIN
@@ -104,29 +100,6 @@ if not st.session_state.logado:
     st.stop()
 
 # =====================================================
-# NAVEGAÇÃO VIA QUERY PARAM
-# =====================================================
-params = st.experimental_get_query_params()
-if "page" in params and params["page"]:
-    st.session_state.destino = params["page"][0]
-    st.experimental_set_query_params()  # limpa a URL
-    st.experimental_rerun()
-
-# Se houver destino definido, redireciona para o módulo correspondente
-if st.session_state.destino:
-    destino = st.session_state.pop("destino")  # remove após usar
-    try:
-        # importa a página correspondente da pasta pages
-        page_module = destino.replace(".py", "")
-        page_path = f"pages.{page_module}"
-        # Import dinâmico
-        mod = __import__(page_path, fromlist=[page_module])
-        st.stop()  # interrompe esta página
-    except Exception as e:
-        st.error(f"Não foi possível abrir a página {destino}: {e}")
-        st.session_state.destino = None
-
-# =====================================================
 # SIDEBAR
 # =====================================================
 st.sidebar.success(f"👤 {st.session_state.usuario}")
@@ -139,10 +112,7 @@ if st.sidebar.button("🚪 Sair"):
 # TELA PRINCIPAL
 # =====================================================
 st.markdown('<div class="titulo-central">Análise Orçamentária</div>', unsafe_allow_html=True)
-st.markdown(
-    '<div class="subtitulo-central">Escolha o módulo que deseja acessar</div>',
-    unsafe_allow_html=True
-)
+st.markdown('<div class="subtitulo-central">Escolha o módulo que deseja acessar</div>', unsafe_allow_html=True)
 st.markdown("---")
 
 # =====================================================
@@ -154,6 +124,7 @@ def card_modulo(titulo, descricao, pagina):
         st.markdown(f"### {titulo}")
         st.caption(descricao)
         if st.button("Acessar", key=chave, use_container_width=True):
+            # Apenas atualiza a query param para abrir a página
             st.experimental_set_query_params(page=pagina)
             st.experimental_rerun()
 
@@ -161,49 +132,19 @@ def card_modulo(titulo, descricao, pagina):
 # GRID DE CARDS
 # =====================================================
 col1, col2, col3 = st.columns(3)
-
 with col1:
-    card_modulo(
-        "📊 Visão Geral",
-        "Resumo consolidado e indicadores",
-        "2_Visão_Geral.py"
-    )
-
+    card_modulo("📊 Visão Geral", "Resumo consolidado e indicadores", "2_Visão_Geral.py")
 with col2:
-    card_modulo(
-        "🔍 Análise por Ação",
-        "Detalhamento por Ação Orçamentária",
-        "3_Análise_Ação.py"
-    )
-
+    card_modulo("🔍 Análise por Ação", "Detalhamento por Ação Orçamentária", "3_Análise_Ação.py")
 with col3:
-    card_modulo(
-        "🧾 Análise por Natureza",
-        "Classificação por Natureza da Despesa",
-        "4_Análise_Natureza.py"
-    )
+    card_modulo("🧾 Análise por Natureza", "Classificação por Natureza da Despesa", "4_Análise_Natureza.py")
 
 st.markdown("---")
 
 col4, col5, col6 = st.columns(3)
-
 with col4:
-    card_modulo(
-        "💰 Metas de Receitas",
-        "Acompanhamento das Metas de Arrecadação",
-        "5_Metas_Receitas.py"
-    )
-
+    card_modulo("💰 Metas de Receitas", "Acompanhamento das Metas de Arrecadação", "5_Metas_Receitas.py")
 with col5:
-    card_modulo(
-        "🏦 Metas por Recursos",
-        "Metas por Fonte de Recurso",
-        "6_Metas_Recursos.py"
-    )
-
+    card_modulo("🏦 Metas por Recursos", "Metas por Fonte de Recurso", "6_Metas_Recursos.py")
 with col6:
-    card_modulo(
-        "🏛️ Extras – Indiretas",
-        "Repasses às Administrações Indiretas",
-        "7_Extras_Indiretas.py"
-    )
+    card_modulo("🏛️ Extras – Indiretas", "Repasses às Administrações Indiretas", "7_Extras_Indiretas.py")
