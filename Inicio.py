@@ -145,13 +145,39 @@ st.markdown("---")
 # FUNÇÃO DE CARD
 # =====================================================
 def card_modulo(titulo, descricao, pagina):
-    with st.container():
-        st.markdown(f"### {titulo}")
-        st.caption(descricao)
+    st.markdown(
+        """
+        <style>
+        .botao-acessar a {
+            display: block;
+            text-align: center;
+            border: 2px solid #0b2a4a;
+            padding: 10px 0;
+            border-radius: 10px;
+            color: #0b2a4a !important;
+            font-weight: 600;
+            text-decoration: none;
+        }
+        .botao-acessar a:hover {
+            background-color: #0b2a4a;
+            color: white !important;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
 
-        st.markdown('<div class="card-botao">', unsafe_allow_html=True)
-        st.page_link(pagina, label="Acessar", use_container_width=False)
-        st.markdown('</div>', unsafe_allow_html=True)
+    with st.container(border=True):
+        st.markdown(f"### {titulo}")
+        st.markdown(descricao)
+
+        # Centraliza o botão
+        col1, col2, col3 = st.columns([1,2,1])
+        with col2:
+            st.markdown('<div class="botao-acessar">', unsafe_allow_html=True)
+            st.page_link(pagina, label="Acessar")
+            st.markdown('</div>', unsafe_allow_html=True)
+
 
 # =====================================================
 # GRID DE CARDS
@@ -203,3 +229,4 @@ with col6:
         "Repasses à Administração Indireta",
         "pages/7_Extras_Indiretas.py"
     )
+
