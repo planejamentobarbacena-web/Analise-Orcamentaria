@@ -168,14 +168,14 @@ with col2:
     card_modulo(
         "🔍 Análise por Ação",
         "Detalhamento por Ação Orçamentária",
-        "pages/3_Analise_Acao.py"
+        "pages/3_Análise_Ação.py"
     )
 
 with col3:
     card_modulo(
         "🧾 Análise por Natureza",
         "Classificação por Natureza da Despesa",
-        "pages/4_Analise_Natureza.py"
+        "pages/4_Análise_Natureza.py"
     )
 
 st.markdown("---")
@@ -202,6 +202,7 @@ with col6:
         "Repasses à Administração Indireta",
         "pages/7_Extras_Indiretas.py"
     )
+
 
 
 
