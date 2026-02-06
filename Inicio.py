@@ -168,14 +168,14 @@ with col2:
     card_modulo(
         "🔍 Análise por Ação",
         "Detalhamento por Ação Orçamentária",
-        "pages/3_Análise_Ação.py"
+        "pages/3_Análise_por_Ação.py"
     )
 
 with col3:
     card_modulo(
         "🧾 Análise por Natureza",
         "Classificação por Natureza da Despesa",
-        "pages/4_Análise_Natureza.py"
+        "pages/4_Análise_por_Natureza.py"
     )
 
 st.markdown("---")
@@ -186,14 +186,14 @@ with col4:
     card_modulo(
         "💰 Metas de Receitas",
         "Acompanhamento das Metas de Arrecadação",
-        "pages/5_Metas_Receitas.py"
+        "pages/5_Metas_por_Receitas.py"
     )
 
 with col5:
     card_modulo(
         "🏦 Metas por Recursos",
         "Metas por Fonte de Recurso",
-        "pages/6_Metas_Recursos.py"
+        "pages/6_Metas_por_Recursos.py"
     )
 
 with col6:
@@ -202,6 +202,7 @@ with col6:
         "Repasses à Administração Indireta",
         "pages/7_Extras_Indiretas.py"
     )
+
 
 
 
