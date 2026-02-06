@@ -161,7 +161,7 @@ with col1:
     card_modulo(
         "📊 Visão Geral",
         "Resumo consolidado e indicadores",
-        "pages/2_Visao_Geral.py"
+        "pages/2_Visão_Geral.py"
     )
 
 with col2:
@@ -202,6 +202,7 @@ with col6:
         "Repasses à Administração Indireta",
         "pages/7_Extras_Indiretas.py"
     )
+
 
 
 
