@@ -17,13 +17,13 @@ if st.session_state.get("perfil") not in ["administrador", "consulta"]:
 # CONFIGURAÇÃO
 # =====================================================
 st.set_page_config(
-    page_title="Legendar Natureza da Despesa",
+    page_title="Legenda da Natureza da Despesa",
     page_icon="📘",
     layout="wide"
 )
 
 st.header("📘 Legenda da Natureza da Despesa")
-st.caption("Consulta rápida para identificar o significado de um código de natureza.")
+st.caption("Consulta rápida para identificar o significado de um código.")
 
 # =====================================================
 # EXERCÍCIO
@@ -37,7 +37,7 @@ exercicio = st.selectbox(
 )
 
 # =====================================================
-# CARGA DO ARQUIVO DO ANO
+# CARREGA DADOS DO ANO
 # =====================================================
 try:
     df = carregar_despesas_por_natureza(exercicio)
@@ -45,7 +45,6 @@ except Exception:
     st.error("Não foi possível carregar o arquivo do exercício.")
     st.stop()
 
-# Base única de naturezas
 base_nat = (
     df[["Natureza_Normalizada", "Descrição da Natureza"]]
     .dropna()
@@ -53,10 +52,18 @@ base_nat = (
     .sort_values("Natureza_Normalizada")
 )
 
-# =====================================================
-# SELEÇÃO DA NATUREZA
-# =====================================================
 naturezas = base_nat["Natureza_Normalizada"].tolist()
+
+# =====================================================
+# MANTER NATUREZA SELECIONADA ENTRE EXERCÍCIOS
+# =====================================================
+if "leg_nat_codigo" not in st.session_state:
+    st.session_state.leg_nat_codigo = naturezas[0]
+
+# Se a natureza atual não existir no novo exercício,
+# seleciona automaticamente a primeira válida
+if st.session_state.leg_nat_codigo not in naturezas:
+    st.session_state.leg_nat_codigo = naturezas[0]
 
 natureza_sel = st.selectbox(
     "Natureza da Despesa (código)",
