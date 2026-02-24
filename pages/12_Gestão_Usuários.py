@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
-import os
+import requests
+import base64
 
 # =====================================================
 # SEGURANÇA
@@ -28,25 +29,52 @@ if "msg_sucesso" in st.session_state:
     st.success(f"✅ {st.session_state.msg_sucesso}")
     del st.session_state.msg_sucesso
 
-
-DATA_DIR = "data"
-ARQ_USUARIOS = os.path.join(DATA_DIR, "usuarios.csv")
-os.makedirs(DATA_DIR, exist_ok=True)
-
 COLUNAS = ["usuario", "senha", "perfil"]
 
 # =====================================================
-# CARREGAR / CRIAR CSV
+# CONFIG GITHUB
 # =====================================================
-def carregar_usuarios():
-    if not os.path.exists(ARQ_USUARIOS):
-        df = pd.DataFrame(columns=COLUNAS)
-        df.to_csv(ARQ_USUARIOS, index=False)
-        return df
-    return pd.read_csv(ARQ_USUARIOS, dtype=str)
+REPO = "planejamentobarbacena-web/analise-orcamentaria"
+BRANCH = "main"
+CAMINHO_GITHUB = "data/usuarios.csv"
 
-def salvar_usuarios(df):
-    df.to_csv(ARQ_USUARIOS, index=False)
+def carregar_usuarios():
+    url_raw = f"https://raw.githubusercontent.com/{REPO}/{BRANCH}/{CAMINHO_GITHUB}"
+    try:
+        return pd.read_csv(url_raw, dtype=str)
+    except:
+        return pd.DataFrame(columns=COLUNAS)
+
+def salvar_no_github(df):
+    token = st.secrets["GITHUB_TOKEN"]
+    url = f"https://api.github.com/repos/{REPO}/contents/{CAMINHO_GITHUB}"
+
+    headers = {
+        "Authorization": f"token {token}",
+        "Accept": "application/vnd.github+json"
+    }
+
+    # Verifica se arquivo já existe
+    response = requests.get(url, headers=headers)
+    sha = None
+
+    if response.status_code == 200:
+        sha = response.json()["sha"]
+
+    csv_bytes = df.to_csv(index=False).encode()
+    conteudo_base64 = base64.b64encode(csv_bytes).decode()
+
+    data = {
+        "message": "Atualização automática: usuarios.csv",
+        "content": conteudo_base64,
+        "branch": BRANCH
+    }
+
+    if sha:
+        data["sha"] = sha
+
+    response = requests.put(url, json=data, headers=headers)
+    return response.status_code
 
 df_usuarios = carregar_usuarios()
 
@@ -78,10 +106,14 @@ if salvar:
         }])
 
         df_usuarios = pd.concat([df_usuarios, novo], ignore_index=True)
-        salvar_usuarios(df_usuarios)
 
-        st.session_state.msg_sucesso = "Usuário cadastrado com sucesso."
-        st.rerun()
+        status = salvar_no_github(df_usuarios)
+
+        if status in [200, 201]:
+            st.session_state.msg_sucesso = "Usuário cadastrado com sucesso."
+            st.rerun()
+        else:
+            st.error("Erro ao salvar no GitHub.")
 
 # =====================================================
 # LISTAGEM E EXCLUSÃO
@@ -101,7 +133,11 @@ else:
 
         if col4.button("🗑️", key=f"del_{row['usuario']}"):
             df_usuarios = df_usuarios[df_usuarios["usuario"] != row["usuario"]]
-            salvar_usuarios(df_usuarios)
-            st.session_state.msg_sucesso = f"Usuário {row['usuario']} removido."
-            st.rerun()
 
+            status = salvar_no_github(df_usuarios)
+
+            if status in [200, 201]:
+                st.session_state.msg_sucesso = f"Usuário {row['usuario']} removido."
+                st.rerun()
+            else:
+                st.error("Erro ao atualizar GitHub.")
