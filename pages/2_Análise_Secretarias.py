@@ -27,7 +27,7 @@ st.set_page_config(
 st.header("🏛️ Análise Orçamentária por Secretaria")
 
 # =====================================================
-# TABELA DE SECRETARIAS (2025/2026)
+# TABELA DE SECRETARIAS
 # =====================================================
 SECRETARIAS = {
     "18": "SESAP",
@@ -52,23 +52,25 @@ SECRETARIAS = {
 }
 
 # =====================================================
-# FUNÇÃO IDENTIFICAR SECRETARIA
+# IDENTIFICAR SECRETARIA
 # =====================================================
-def identificar_secretaria(numero_organograma):
+def identificar_secretaria(org):
 
-    if pd.isna(numero_organograma):
+    if pd.isna(org):
         return "Não identificada"
 
-    numero = str(numero_organograma).strip()
+    org = str(org).strip()
 
-    codigo = numero[:2]
+    cod2 = org[:2]
+    cod1 = org[:1]
 
-    if codigo in SECRETARIAS:
-        return SECRETARIAS[codigo]
+    if cod2 in SECRETARIAS:
+        return SECRETARIAS[cod2]
 
-    codigo = numero[:1]
+    if cod1 in SECRETARIAS:
+        return SECRETARIAS[cod1]
 
-    return SECRETARIAS.get(codigo, "Não identificada")
+    return "Não identificada"
 
 
 # =====================================================
@@ -79,27 +81,24 @@ def fmt_moeda_br(valor):
         return "0,00"
     return f"{valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
+
 # =====================================================
 # FILTROS
 # =====================================================
 st.subheader("🎯 Filtros")
 
-# -----------------------------------------------------
-# EXERCÍCIO
-# -----------------------------------------------------
 exercicios = exercicios_disponiveis()
 
 sel_ex = st.multiselect(
     "Exercício",
     ["Todos"] + exercicios,
-    default=st.session_state.get("sec_exercicio", ["Todos"]),
-    key="sec_exercicio"
+    default=["Todos"]
 )
 
 anos = exercicios if "Todos" in sel_ex else sel_ex
 
 # =====================================================
-# CARGA DOS DADOS
+# CARGA DE DADOS
 # =====================================================
 dfs = []
 
@@ -108,7 +107,7 @@ for ano in anos:
         df_ano = carregar_despesas(ano)
         df_ano["Exercício"] = ano
         dfs.append(df_ano)
-    except Exception:
+    except:
         pass
 
 if not dfs:
@@ -118,72 +117,30 @@ if not dfs:
 df = pd.concat(dfs, ignore_index=True)
 
 # =====================================================
-# NORMALIZAÇÃO
+# IDENTIFICAR SECRETARIA
 # =====================================================
-for col in [
-    "Número do Organograma",
-    "Recurso"
-]:
-    if col in df.columns:
-        df[col] = df[col].astype(str).str.strip()
-
-# =====================================================
-# IDENTIFICAÇÃO DA SECRETARIA
-# =====================================================
-df["Secretaria"] = df["Número do Organograma"].apply(identificar_secretaria)
+df["Secretaria"] = df["Organograma_Codigo"].apply(identificar_secretaria)
 
 # =====================================================
 # FILTRO SECRETARIA
 # =====================================================
-secretarias = ["Todas"] + sorted(df["Secretaria"].dropna().unique())
-
-valor_atual = st.session_state.get("sec_secretaria", "Todas")
-
-if valor_atual not in secretarias:
-    valor_atual = "Todas"
+secretarias = ["Todas"] + sorted(df["Secretaria"].unique())
 
 secretaria_sel = st.selectbox(
     "Secretaria",
-    secretarias,
-    index=secretarias.index(valor_atual),
-    key="sec_secretaria"
+    secretarias
 )
 
 if secretaria_sel != "Todas":
     df = df[df["Secretaria"] == secretaria_sel]
 
-# =====================================================
-# FILTRO RECURSO
-# =====================================================
-recursos = ["Todos"] + sorted(df["Recurso"].dropna().unique())
-
-valor_atual = st.session_state.get("sec_recurso", ["Todos"])
-
-if not set(valor_atual).intersection(recursos):
-    valor_atual = ["Todos"]
-
-recursos_sel = st.multiselect(
-    "Fonte de Recurso",
-    options=recursos,
-    default=valor_atual,
-    key="sec_recurso"
-)
-
-if "Todos" not in recursos_sel:
-    df = df[df["Recurso"].isin(recursos_sel)]
 
 # =====================================================
 # AGREGAÇÃO
 # =====================================================
-chaves = [
-    "Exercício",
-    "Secretaria",
-    "Recurso"
-]
-
 df_ag = (
     df
-    .groupby(chaves, as_index=False)[
+    .groupby(["Exercício", "Secretaria"], as_index=False)[
         ["valor_orcado", "valor_atualizado", "valor_empenhado"]
     ]
     .sum()
@@ -193,47 +150,29 @@ df_ag = (
 # GRÁFICO
 # =====================================================
 st.markdown("---")
-st.subheader("📊 Comparativo Orçamentário por Exercício")
+st.subheader("📊 Comparativo Orçamentário")
 
-df_graf = (
-    df_ag
-    .groupby("Exercício", as_index=False)[
-        ["valor_orcado", "valor_atualizado", "valor_empenhado"]
-    ]
-    .sum()
-)
-
-df_long = df_graf.melt(
-    id_vars="Exercício",
-    value_vars=["valor_orcado", "valor_atualizado", "valor_empenhado"],
+df_long = df_ag.melt(
+    id_vars=["Exercício","Secretaria"],
+    value_vars=["valor_orcado","valor_atualizado","valor_empenhado"],
     var_name="Tipo",
     value_name="Valor"
 )
 
 df_long["Tipo"] = df_long["Tipo"].map({
-    "valor_orcado": "Orçada",
-    "valor_atualizado": "Atualizada",
-    "valor_empenhado": "Empenhada"
+    "valor_orcado":"Orçada",
+    "valor_atualizado":"Atualizada",
+    "valor_empenhado":"Empenhada"
 })
-
-ordem = ["Orçada", "Atualizada", "Empenhada"]
-df_long["Tipo"] = pd.Categorical(df_long["Tipo"], categories=ordem, ordered=True)
-
-df_long["Valor_fmt"] = df_long["Valor"].apply(fmt_moeda_br)
 
 grafico = (
     alt.Chart(df_long)
     .mark_bar(size=30)
     .encode(
-        x=alt.X("Exercício:N", title="Exercício"),
-        xOffset=alt.XOffset("Tipo:N", sort=ordem),
-        y=alt.Y("Valor:Q", title="Valor (R$)"),
-        color=alt.Color("Tipo:N", title="Despesa", sort=ordem),
-        tooltip=[
-            "Exercício:N",
-            "Tipo:N",
-            alt.Tooltip("Valor_fmt:N", title="Valor (R$)")
-        ]
+        x="Exercício:N",
+        y="Valor:Q",
+        color="Tipo:N",
+        tooltip=["Exercício","Tipo","Valor"]
     )
     .properties(height=420)
 )
@@ -244,32 +183,18 @@ st.altair_chart(grafico, use_container_width=True)
 # TABELA
 # =====================================================
 st.markdown("---")
-st.subheader("📋 Detalhamento por Secretaria e Fonte de Recurso")
+st.subheader("📋 Detalhamento por Secretaria")
 
 tabela = df_ag.rename(columns={
-    "Secretaria": "Secretaria",
-    "Recurso": "Fonte de Recurso",
-    "valor_orcado": "Valor Orçado",
-    "valor_atualizado": "Valor Atualizado",
-    "valor_empenhado": "Valor Empenhado"
+    "valor_orcado":"Valor Orçado",
+    "valor_atualizado":"Valor Atualizado",
+    "valor_empenhado":"Valor Empenhado"
 })
 
-for col in ["Valor Orçado", "Valor Atualizado", "Valor Empenhado"]:
+for col in ["Valor Orçado","Valor Atualizado","Valor Empenhado"]:
     tabela[col] = tabela[col].apply(lambda x: f"R$ {fmt_moeda_br(x)}")
 
-st.dataframe(
-    tabela[
-        [
-            "Exercício",
-            "Secretaria",
-            "Fonte de Recurso",
-            "Valor Orçado",
-            "Valor Atualizado",
-            "Valor Empenhado",
-        ]
-    ],
-    use_container_width=True
-)
+st.dataframe(tabela, use_container_width=True)
 
 # =====================================================
 # DOWNLOAD
@@ -279,8 +204,6 @@ csv = tabela.to_csv(index=False, sep=";", encoding="utf-8")
 st.download_button(
     "⬇️ Baixar CSV",
     csv,
-    file_name="analise_por_secretaria.csv",
+    file_name="analise_secretaria.csv",
     mime="text/csv"
 )
-
-st.caption("Análise por Secretaria • Execução Orçamentária Consolidada")
