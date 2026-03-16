@@ -167,11 +167,12 @@ df_long["Tipo"] = df_long["Tipo"].map({
 
 grafico = (
     alt.Chart(df_long)
-    .mark_bar(size=30)
+    .mark_bar(size=25)
     .encode(
-        x="Exercício:N",
-        y="Valor:Q",
-        color="Tipo:N",
+        x=alt.X("Exercício:N", title="Exercício"),
+        y=alt.Y("Valor:Q", title="Valor"),
+        color=alt.Color("Tipo:N", title="Tipo"),
+        xOffset="Tipo:N",
         tooltip=["Exercício","Tipo","Valor"]
     )
     .properties(height=420)
