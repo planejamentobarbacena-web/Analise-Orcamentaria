@@ -203,7 +203,11 @@ with col6:
         "pages/7_Extras_Indiretas.py"
     )
 
-
+card_modulo(
+    "🏛️ Análise por Secretaria",
+    "Execução Orçamentária por Secretaria",
+    "pages/2_Analise_por_Secretaria.py"
+)
 
 
 
