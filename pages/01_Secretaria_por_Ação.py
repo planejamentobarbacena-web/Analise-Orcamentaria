@@ -79,7 +79,7 @@ def identificar_secretaria(org):
 
 
 # =====================================================
-# MOEDA
+# FORMATAÇÃO MOEDA
 # =====================================================
 def fmt_moeda_br(valor):
     if pd.isna(valor):
@@ -90,14 +90,13 @@ def fmt_moeda_br(valor):
 # =====================================================
 # FILTROS
 # =====================================================
-# =====================================================
-# FILTROS
-# =====================================================
 st.subheader("🎯 Filtros")
 
-# -------- PRIMEIRA LINHA --------
 col1, col2, col3 = st.columns(3)
 
+# -----------------------------------------------------
+# EXERCÍCIO
+# -----------------------------------------------------
 with col1:
 
     exercicios = exercicios_disponiveis()
@@ -111,44 +110,8 @@ with col1:
     anos = exercicios if "Todos" in sel_ex else sel_ex
 
 
-with col2:
-
-    secretarias = ["Todas"] + sorted(df["Secretaria"].unique())
-
-    secretaria_sel = st.selectbox(
-        "Secretaria",
-        secretarias
-    )
-
-    if secretaria_sel != "Todas":
-        df = df[df["Secretaria"] == secretaria_sel]
-
-
-with col3:
-
-    recursos = ["Todos"] + sorted(df["Recurso"].dropna().unique())
-
-    recurso_sel = st.selectbox(
-        "Fonte de Recurso",
-        recursos
-    )
-
-    if recurso_sel != "Todos":
-        df = df[df["Recurso"] == recurso_sel]
-
-
-# -------- SEGUNDA LINHA --------
-acoes = ["Todas"] + sorted(df["Descrição da ação"].dropna().unique())
-
-acoes_sel = st.multiselect(
-    "Descrição da Ação",
-    acoes,
-    default=["Todas"]
-)
-
-
 # =====================================================
-# CARGA DOS DADOS
+# CARGA DE DADOS
 # =====================================================
 dfs = []
 
@@ -171,9 +134,10 @@ df = pd.concat(dfs, ignore_index=True)
 # =====================================================
 df["Secretaria"] = df["Organograma_Codigo"].apply(identificar_secretaria)
 
-# =====================================================
-# FILTRO SECRETARIA
-# =====================================================
+
+# -----------------------------------------------------
+# SECRETARIA
+# -----------------------------------------------------
 with col2:
 
     secretarias = ["Todas"] + sorted(df["Secretaria"].unique())
@@ -187,26 +151,10 @@ with col2:
         df = df[df["Secretaria"] == secretaria_sel]
 
 
-# =====================================================
-# FILTRO AÇÃO
-# =====================================================
+# -----------------------------------------------------
+# RECURSO
+# -----------------------------------------------------
 with col3:
-
-    acoes = ["Todas"] + sorted(df["Descrição da ação"].dropna().unique())
-
-    acao_sel = st.selectbox(
-        "Descrição da Ação",
-        acoes
-    )
-
-    if acao_sel != "Todas":
-        df = df[df["Descrição da ação"] == acao_sel]
-
-
-# =====================================================
-# FILTRO RECURSO
-# =====================================================
-with col4:
 
     recursos = ["Todos"] + sorted(df["Recurso"].dropna().unique())
 
@@ -217,6 +165,21 @@ with col4:
 
     if recurso_sel != "Todos":
         df = df[df["Recurso"] == recurso_sel]
+
+
+# -----------------------------------------------------
+# SEGUNDA LINHA – AÇÃO
+# -----------------------------------------------------
+acoes = ["Todas"] + sorted(df["Descrição da ação"].dropna().unique())
+
+acoes_sel = st.multiselect(
+    "Descrição da Ação",
+    acoes,
+    default=["Todas"]
+)
+
+if "Todas" not in acoes_sel:
+    df = df[df["Descrição da ação"].isin(acoes_sel)]
 
 
 # =====================================================
@@ -233,9 +196,10 @@ df_ag = (
             "Recurso"
         ],
         as_index=False
-    )[["valor_orcado","valor_atualizado","valor_empenhado"]]
+    )[["valor_orcado", "valor_atualizado", "valor_empenhado"]]
     .sum()
 )
+
 
 # =====================================================
 # GRÁFICO
@@ -246,35 +210,42 @@ st.subheader("📊 Comparativo Orçamentário")
 df_graf = (
     df_ag
     .groupby("Exercício", as_index=False)[
-        ["valor_orcado","valor_atualizado","valor_empenhado"]
+        ["valor_orcado", "valor_atualizado", "valor_empenhado"]
     ]
     .sum()
 )
 
 df_long = df_graf.melt(
     id_vars="Exercício",
-    value_vars=["valor_orcado","valor_atualizado","valor_empenhado"],
+    value_vars=["valor_orcado", "valor_atualizado", "valor_empenhado"],
     var_name="Tipo",
     value_name="Valor"
 )
 
 df_long["Tipo"] = df_long["Tipo"].map({
-    "valor_orcado":"Orçada",
-    "valor_atualizado":"Atualizada",
-    "valor_empenhado":"Empenhada"
+    "valor_orcado": "Orçada",
+    "valor_atualizado": "Atualizada",
+    "valor_empenhado": "Empenhada"
 })
 
-ordem = ["Orçada","Atualizada","Empenhada"]
+ordem = ["Orçada", "Atualizada", "Empenhada"]
 
 grafico = (
     alt.Chart(df_long)
     .mark_bar(size=30)
     .encode(
-        x=alt.X("Exercício:N"),
+        x=alt.X("Exercício:N", title="Exercício"),
         xOffset=alt.XOffset("Tipo:N", sort=ordem),
-        y=alt.Y("Valor:Q"),
-        color=alt.Color("Tipo:N", sort=ordem),
-        tooltip=["Exercício","Tipo","Valor"]
+        y=alt.Y("Valor:Q", title="Valor"),
+        color=alt.Color(
+            "Tipo:N",
+            sort=ordem,
+            scale=alt.Scale(
+                domain=ordem,
+                range=["#000080", "#00CEC8", "#FF2C2C"]
+            )
+        ),
+        tooltip=["Exercício", "Tipo", "Valor"]
     )
     .properties(height=420)
 )
@@ -289,14 +260,14 @@ st.markdown("---")
 st.subheader("📋 Detalhamento")
 
 tabela = df_ag.rename(columns={
-    "Descrição da ação":"Descrição da Ação",
-    "Recurso":"Fonte de Recurso",
-    "valor_orcado":"Valor Orçado",
-    "valor_atualizado":"Valor Atualizado",
-    "valor_empenhado":"Valor Empenhado"
+    "Descrição da ação": "Descrição da Ação",
+    "Recurso": "Fonte de Recurso",
+    "valor_orcado": "Valor Orçado",
+    "valor_atualizado": "Valor Atualizado",
+    "valor_empenhado": "Valor Empenhado"
 })
 
-for col in ["Valor Orçado","Valor Atualizado","Valor Empenhado"]:
+for col in ["Valor Orçado", "Valor Atualizado", "Valor Empenhado"]:
     tabela[col] = tabela[col].apply(lambda x: f"R$ {fmt_moeda_br(x)}")
 
 st.dataframe(tabela, use_container_width=True)
