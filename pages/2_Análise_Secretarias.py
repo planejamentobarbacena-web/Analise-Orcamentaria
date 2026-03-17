@@ -171,8 +171,18 @@ grafico = (
     .encode(
         x=alt.X("Exercício:N", title="Exercício"),
         y=alt.Y("Valor:Q", title="Valor"),
-        color=alt.Color("Tipo:N", title="Tipo"),
-        xOffset="Tipo:N",
+        color=alt.Color(
+            "Tipo:N",
+            sort=["Orçada","Atualizada","Empenhada"],
+            scale=alt.Scale(
+                domain=["Orçada","Atualizada","Empenhada"],
+                range=["#4CAF50","#2196F3","#FF9800"]
+            )
+        ),
+        xOffset=alt.XOffset(
+            "Tipo:N",
+            sort=["Orçada","Atualizada","Empenhada"]
+        ),
         tooltip=["Exercício","Tipo","Valor"]
     )
     .properties(height=420)
