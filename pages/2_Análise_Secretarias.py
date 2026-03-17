@@ -31,8 +31,8 @@ st.header("🏛️ Análise Orçamentária por Secretaria")
 # =====================================================
 SECRETARIAS = {
     "18": "SESAP",
-    "3": "CGEM",
-    "5": "SEGAB",
+    "03": "CGEM",
+    "05": "SEGAB",
     "13": "SEAPA",
     "15": "SEGOV",
     "16": "SEMOP",
