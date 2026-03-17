@@ -176,7 +176,7 @@ grafico = (
             sort=["Orçada","Atualizada","Empenhada"],
             scale=alt.Scale(
                 domain=["Orçada","Atualizada","Empenhada"],
-                range=["#4CAF50","#2196F3","#FF9800"]
+                range=["#000080","#00CEC8","#FF2C2C"]
             )
         ),
         xOffset=alt.XOffset(
