@@ -40,7 +40,7 @@ SECRETARIAS = {
     "16": "SEMOP",
     "17": "SEPLAN - AR",
     "19": "SEFAZ",
-    "21": "GCM"
+    "21": "GCM",
     "23": "AGM",
     "24": "SETRAM - AR",
     "25": "SEMAS",
