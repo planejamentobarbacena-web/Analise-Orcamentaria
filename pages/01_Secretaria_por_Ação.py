@@ -90,11 +90,14 @@ def fmt_moeda_br(valor):
 # =====================================================
 # FILTROS
 # =====================================================
+# =====================================================
+# FILTROS
+# =====================================================
 st.subheader("🎯 Filtros")
 
-col1,col2,col3,col4 = st.columns(4)
+# -------- PRIMEIRA LINHA --------
+col1, col2, col3 = st.columns(3)
 
-# Exercício
 with col1:
 
     exercicios = exercicios_disponiveis()
@@ -106,6 +109,42 @@ with col1:
     )
 
     anos = exercicios if "Todos" in sel_ex else sel_ex
+
+
+with col2:
+
+    secretarias = ["Todas"] + sorted(df["Secretaria"].unique())
+
+    secretaria_sel = st.selectbox(
+        "Secretaria",
+        secretarias
+    )
+
+    if secretaria_sel != "Todas":
+        df = df[df["Secretaria"] == secretaria_sel]
+
+
+with col3:
+
+    recursos = ["Todos"] + sorted(df["Recurso"].dropna().unique())
+
+    recurso_sel = st.selectbox(
+        "Fonte de Recurso",
+        recursos
+    )
+
+    if recurso_sel != "Todos":
+        df = df[df["Recurso"] == recurso_sel]
+
+
+# -------- SEGUNDA LINHA --------
+acoes = ["Todas"] + sorted(df["Descrição da ação"].dropna().unique())
+
+acoes_sel = st.multiselect(
+    "Descrição da Ação",
+    acoes,
+    default=["Todas"]
+)
 
 
 # =====================================================
